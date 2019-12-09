@@ -5,9 +5,5 @@
 .cache/
 /pkg/
 /bin/
-/udns
-/build/udns
-*.rpm
-vendor/
+/simgo
 .DS_Store
-local.dns
