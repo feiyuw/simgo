@@ -2,12 +2,11 @@ package protocols
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"simgo/logger"
 
 	"github.com/fullstorydev/grpcurl"
+	"github.com/jhump/protoreflect/grpcreflect"
 	"google.golang.org/grpc"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
@@ -21,87 +20,49 @@ type GrpcClient struct {
 	desc grpcurl.DescriptorSource
 }
 
-// one endpoint contain multi services
-type GrpcService struct {
-	name string // service name
-}
-
-// one service contain multi methods
-type GrpcMethod struct {
-	name string
-}
-
 // Create a new grpc client
 func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) *GrpcClient {
+	var descSource grpcurl.DescriptorSource
+
+	if len(protos) > 0 {
+		descSource, err := grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
+		if err != nil {
+			logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
+		}
+		return &GrpcClient{addr: addr, desc: descSource}
+	}
+
+	if addr == "" {
+		logger.Fatal("protocols/grpc", "addr or protos should be set")
+	}
+
+	// fetch from server reflection RPC
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		logger.Fatalf("protocols/grpc", "did not connect: %v", err)
 	}
+	c := rpb.NewServerReflectionClient(conn)
+	ctx := context.Background()
+	refClient := grpcreflect.NewClient(ctx, c)
+	descSource = grpcurl.DescriptorSourceFromServer(ctx, refClient)
 
-	var descSource grpcurl.DescriptorSource = nil
-
-	if len(protos) > 0 {
-		descSource, err = grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
-		if err != nil {
-			logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
-		}
-	}
-	return &GrpcClient{addr: addr, conn: conn, desc: descSource}
+	return &GrpcClient{addr: addr, desc: descSource}
 }
 
-func (gc *GrpcClient) ListServices() ([]*GrpcService, error) {
-	if gc.desc != nil { // from protos
-		return gc.listServicesFromProtos()
-	}
-	return gc.listServicesFromReflection()
-}
-
-func (gc *GrpcClient) listServicesFromProtos() ([]*GrpcService, error) {
+func (gc *GrpcClient) ListServices() ([]string, error) {
 	svcs, err := grpcurl.ListServices(gc.desc)
 	if err != nil {
 		return nil, err
 	}
-	grpcServices := make([]*GrpcService, len(svcs))
-	for idx, svc := range svcs {
-		grpcServices[idx] = &GrpcService{name: svc}
-	}
-	return grpcServices, nil
+	return svcs, nil
 }
 
-func (gc *GrpcClient) listServicesFromReflection() ([]*GrpcService, error) {
-	c := rpb.NewServerReflectionClient(gc.conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	stream, err := c.ServerReflectionInfo(ctx)
+func (gc *GrpcClient) ListMethods(svcName string) ([]string, error) {
+	mtds, err := grpcurl.ListMethods(gc.desc, svcName)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get ServerReflectionInfo: %v", err)
+		return nil, err
 	}
-	if err := stream.Send(&rpb.ServerReflectionRequest{
-		MessageRequest: &rpb.ServerReflectionRequest_ListServices{},
-	}); err != nil {
-		return nil, fmt.Errorf("failed to send request: %v", err)
-	}
-	r, err := stream.Recv()
-	if err != nil {
-		// io.EOF is not ok.
-		return nil, fmt.Errorf("failed to recv response: %v", err)
-	}
-
-	switch r.MessageResponse.(type) {
-	case *rpb.ServerReflectionResponse_ListServicesResponse:
-		services := r.GetListServicesResponse().Service
-		grpcServices := make([]*GrpcService, len(services))
-		for idx, svc := range services {
-			grpcServices[idx] = &GrpcService{name: svc.Name}
-		}
-		return grpcServices, nil
-	default:
-		return nil, fmt.Errorf("ListServices = %v, want type <ServerReflectionResponse_ListServicesResponse>", r.MessageResponse)
-	}
-}
-
-func (gc *GrpcClient) ListMethods() ([]*GrpcMethod, error) {
-	return []*GrpcMethod{}, nil
+	return mtds, nil
 }
 
 // ================================== server ==================================
