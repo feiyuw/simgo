@@ -40,6 +40,25 @@ func TestGrpcClient(t *testing.T) {
 		So(mtds[0], ShouldEqual, "helloworld.Greeter.SayHello")
 	})
 
+	Convey("list grpc services and methos from multi proto files", t, func() {
+		client := NewGrpcClient("", []string{"helloworld.proto", "echo.proto"}, grpc.WithInsecure())
+		svcs, err := client.ListServices()
+		So(err, ShouldBeNil)
+		So(svcs, ShouldResemble, []string{"grpc.examples.echo.Echo", "helloworld.Greeter"})
+		mtds, err := client.ListMethods("helloworld.Greeter")
+		So(err, ShouldBeNil)
+		So(len(mtds), ShouldEqual, 1)
+		So(mtds[0], ShouldEqual, "helloworld.Greeter.SayHello")
+		mtds, err = client.ListMethods("grpc.examples.echo.Echo")
+		So(err, ShouldBeNil)
+		So(mtds, ShouldResemble, []string{
+			"grpc.examples.echo.Echo.BidirectionalStreamingEcho",
+			"grpc.examples.echo.Echo.ClientStreamingEcho",
+			"grpc.examples.echo.Echo.ServerStreamingEcho",
+			"grpc.examples.echo.Echo.UnaryEcho",
+		})
+	})
+
 	Convey("list grpc services and methods from server reflection", t, func() {
 		s := startDemoServer(3999)
 		defer s.Stop()

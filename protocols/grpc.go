@@ -21,6 +21,8 @@ type GrpcClient struct {
 }
 
 // Create a new grpc client
+// if protos set, will get services and methods from proto files
+// if addr set but protos empty, will get services and methods from server reflection
 func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) *GrpcClient {
 	var descSource grpcurl.DescriptorSource
 
