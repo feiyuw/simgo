@@ -7,6 +7,7 @@ import (
 
 	"simgo/logger"
 
+	"github.com/fullstorydev/grpcurl"
 	"google.golang.org/grpc"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
@@ -17,6 +18,7 @@ import (
 type GrpcClient struct {
 	addr string // connected service addr, eg. 127.0.0.1:1988
 	conn *grpc.ClientConn
+	desc grpcurl.DescriptorSource
 }
 
 // one endpoint contain multi services
@@ -30,15 +32,43 @@ type GrpcMethod struct {
 }
 
 // Create a new grpc client
-func NewGrpcClient(addr string, opts ...grpc.DialOption) *GrpcClient {
+func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) *GrpcClient {
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
 		logger.Fatalf("protocols/grpc", "did not connect: %v", err)
 	}
-	return &GrpcClient{addr: addr, conn: conn}
+
+	var descSource grpcurl.DescriptorSource = nil
+
+	if len(protos) > 0 {
+		descSource, err = grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
+		if err != nil {
+			logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
+		}
+	}
+	return &GrpcClient{addr: addr, conn: conn, desc: descSource}
 }
 
 func (gc *GrpcClient) ListServices() ([]*GrpcService, error) {
+	if gc.desc != nil { // from protos
+		return gc.listServicesFromProtos()
+	}
+	return gc.listServicesFromReflection()
+}
+
+func (gc *GrpcClient) listServicesFromProtos() ([]*GrpcService, error) {
+	svcs, err := grpcurl.ListServices(gc.desc)
+	if err != nil {
+		return nil, err
+	}
+	grpcServices := make([]*GrpcService, len(svcs))
+	for idx, svc := range svcs {
+		grpcServices[idx] = &GrpcService{name: svc}
+	}
+	return grpcServices, nil
+}
+
+func (gc *GrpcClient) listServicesFromReflection() ([]*GrpcService, error) {
 	c := rpb.NewServerReflectionClient(gc.conn)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

@@ -18,10 +18,20 @@ import (
 )
 
 func TestGrpcServiceInspect(t *testing.T) {
-	Convey("list grpc services", t, func() {
+	Convey("list grpc services from proto files", t, func() {
+		s := startDemoServer(2999)
+		defer s.Stop()
+		client := NewGrpcClient("127.0.0.1:2999", []string{"helloworld.proto"}, grpc.WithInsecure())
+		svcs, err := client.ListServices()
+		So(err, ShouldBeNil)
+		So(len(svcs), ShouldEqual, 1)
+		So(svcs[0].name, ShouldEqual, "helloworld.Greeter")
+	})
+
+	Convey("list grpc services from server reflection", t, func() {
 		s := startDemoServer(3999)
 		defer s.Stop()
-		client := NewGrpcClient("127.0.0.1:3999", grpc.WithInsecure())
+		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
 		svcs, err := client.ListServices()
 		So(err, ShouldBeNil)
 		So(len(svcs), ShouldEqual, 3)
