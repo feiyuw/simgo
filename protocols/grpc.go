@@ -42,7 +42,7 @@ func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) *GrpcC
 		logger.Fatalf("protocols/grpc", "did not connect: %v", err)
 	}
 	c := rpb.NewServerReflectionClient(conn)
-	ctx := context.Background()
+	ctx := context.Background() // TODO: add timeout, dialtime options
 	refClient := grpcreflect.NewClient(ctx, c)
 	descSource = grpcurl.DescriptorSourceFromServer(ctx, refClient)
 
