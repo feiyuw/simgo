@@ -1,7 +1,9 @@
 package protocols
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 
 	"simgo/logger"
 
@@ -12,11 +14,14 @@ import (
 )
 
 // ================================== client ==================================
+var (
+	ctx = context.Background() // TODO: add timeout, dialtime options
+)
 
 // client
 type GrpcClient struct {
-	addr string // connected service addr, eg. 127.0.0.1:1988
-	conn *grpc.ClientConn
+	addr string           // connected service addr, eg. 127.0.0.1:1988
+	conn *grpc.ClientConn // connection with grpc server
 	desc grpcurl.DescriptorSource
 }
 
@@ -26,29 +31,29 @@ type GrpcClient struct {
 func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) *GrpcClient {
 	var descSource grpcurl.DescriptorSource
 
+	if addr == "" {
+		logger.Fatal("protocols/grpc", "addr should not be empty")
+	}
+
+	conn, err := grpc.Dial(addr, opts...)
+	if err != nil {
+		logger.Fatalf("protocols/grpc", "did not connect: %v", err)
+	}
+
 	if len(protos) > 0 {
 		descSource, err := grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
 		if err != nil {
 			logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
 		}
-		return &GrpcClient{addr: addr, desc: descSource}
-	}
-
-	if addr == "" {
-		logger.Fatal("protocols/grpc", "addr or protos should be set")
+		return &GrpcClient{addr: addr, conn: conn, desc: descSource}
 	}
 
 	// fetch from server reflection RPC
-	conn, err := grpc.Dial(addr, opts...)
-	if err != nil {
-		logger.Fatalf("protocols/grpc", "did not connect: %v", err)
-	}
 	c := rpb.NewServerReflectionClient(conn)
-	ctx := context.Background() // TODO: add timeout, dialtime options
 	refClient := grpcreflect.NewClient(ctx, c)
 	descSource = grpcurl.DescriptorSourceFromServer(ctx, refClient)
 
-	return &GrpcClient{addr: addr, desc: descSource}
+	return &GrpcClient{addr: addr, conn: conn, desc: descSource}
 }
 
 func (gc *GrpcClient) ListServices() ([]string, error) {
@@ -65,6 +70,32 @@ func (gc *GrpcClient) ListMethods(svcName string) ([]string, error) {
 		return nil, err
 	}
 	return mtds, nil
+}
+
+func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) (map[string]interface{}, error) {
+	var in, out bytes.Buffer
+
+	reqBytes, err := json.Marshal(reqData)
+	if err != nil {
+		return nil, err
+	}
+	in.Write(reqBytes)
+
+	rf, formatter, err := grpcurl.RequestParserAndFormatterFor(grpcurl.FormatJSON, gc.desc, true, false, &in)
+	if err != nil {
+		return nil, err
+	}
+	h := grpcurl.NewDefaultEventHandler(&out, gc.desc, formatter, false)
+	if err = grpcurl.InvokeRPC(ctx, gc.desc, gc.conn, mtdName, []string{}, h, rf.Next); err != nil {
+		return nil, err
+	}
+
+	resp := make(map[string]interface{})
+	if err = json.Unmarshal(out.Bytes(), &resp); err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // ================================== server ==================================

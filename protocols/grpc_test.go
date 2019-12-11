@@ -18,16 +18,8 @@ import (
 )
 
 func TestGrpcClient(t *testing.T) {
-	Convey("list grpc services and methods from proto files", t, func() {
-		client := NewGrpcClient("", []string{"helloworld.proto"}, grpc.WithInsecure())
-		svcs, err := client.ListServices()
-		So(err, ShouldBeNil)
-		So(len(svcs), ShouldEqual, 1)
-		So(svcs[0], ShouldEqual, "helloworld.Greeter")
-		mtds, err := client.ListMethods("helloworld.Greeter")
-		So(len(mtds), ShouldEqual, 1)
-		So(mtds[0], ShouldEqual, "helloworld.Greeter.SayHello")
-	})
+	s := startDemoServer(3999)
+	defer s.Stop()
 
 	Convey("proto files have higher priority than server reflection", t, func() {
 		client := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto"}, grpc.WithInsecure())
@@ -41,7 +33,7 @@ func TestGrpcClient(t *testing.T) {
 	})
 
 	Convey("list grpc services and methos from multi proto files", t, func() {
-		client := NewGrpcClient("", []string{"helloworld.proto", "echo.proto"}, grpc.WithInsecure())
+		client := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto", "echo.proto"}, grpc.WithInsecure())
 		svcs, err := client.ListServices()
 		So(err, ShouldBeNil)
 		So(svcs, ShouldResemble, []string{"grpc.examples.echo.Echo", "helloworld.Greeter"})
@@ -60,8 +52,6 @@ func TestGrpcClient(t *testing.T) {
 	})
 
 	Convey("list grpc services and methods from server reflection", t, func() {
-		s := startDemoServer(3999)
-		defer s.Stop()
 		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
 		svcs, err := client.ListServices()
 		So(err, ShouldBeNil)
@@ -76,6 +66,13 @@ func TestGrpcClient(t *testing.T) {
 			"grpc.examples.echo.Echo.ServerStreamingEcho",
 			"grpc.examples.echo.Echo.UnaryEcho",
 		})
+	})
+
+	Convey("invoke rpc of sync method with proto files", t, func() {
+		client := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto"}, grpc.WithInsecure())
+		out, err := client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "you"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "Hello you")
 	})
 }
 
