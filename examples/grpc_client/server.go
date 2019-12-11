@@ -23,6 +23,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
 
@@ -51,6 +52,23 @@ type ecServer struct {
 
 func (s *ecServer) UnaryEcho(ctx context.Context, req *ecpb.EchoRequest) (*ecpb.EchoResponse, error) {
 	return &ecpb.EchoResponse{Message: req.Message}, nil
+}
+
+func (s *ecServer) ClientStreamingEcho(stream ecpb.Echo_ClientStreamingEchoServer) error {
+	// Read requests and send responses.
+	var message string
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			fmt.Printf("echo last received message\n")
+			return stream.SendAndClose(&ecpb.EchoResponse{Message: message})
+		}
+		message = in.Message
+		fmt.Printf("request received: %v, building echo\n", in)
+		if err != nil {
+			return err
+		}
+	}
 }
 
 func main() {

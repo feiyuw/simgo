@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
+	"io"
 	"net"
 	"testing"
 	"time"
@@ -74,6 +75,20 @@ func TestGrpcClient(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(out["message"], ShouldEqual, "Hello you")
 	})
+
+	Convey("invoke rpc of sync method without proto files", t, func() {
+		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "hello"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "hello")
+	})
+
+	Convey("invoke rpc of streaming method", t, func() {
+		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.ClientStreamingEcho", map[string]interface{}{"message": "hello"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "hello")
+	})
 }
 
 // hwServer is used to implement helloworld.GreeterServer.
@@ -92,6 +107,23 @@ type ecServer struct {
 
 func (s *ecServer) UnaryEcho(ctx context.Context, req *ecpb.EchoRequest) (*ecpb.EchoResponse, error) {
 	return &ecpb.EchoResponse{Message: req.Message}, nil
+}
+
+func (s *ecServer) ClientStreamingEcho(stream ecpb.Echo_ClientStreamingEchoServer) error {
+	// Read requests and send responses.
+	var message string
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			fmt.Printf("echo last received message\n")
+			return stream.SendAndClose(&ecpb.EchoResponse{Message: message})
+		}
+		message = in.Message
+		fmt.Printf("request received: %v, building echo\n", in)
+		if err != nil {
+			return err
+		}
+	}
 }
 
 func startDemoServer(port int) *grpc.Server {
