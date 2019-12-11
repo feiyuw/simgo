@@ -88,6 +88,10 @@ func TestGrpcClient(t *testing.T) {
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.ClientStreamingEcho", map[string]interface{}{"message": "hello"})
 		So(err, ShouldBeNil)
 		So(out["message"], ShouldEqual, "hello")
+
+		out, err = client.InvokeRPC("grpc.examples.echo.Echo.BidirectionalStreamingEcho", map[string]interface{}{"message": "hello"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "hello")
 	})
 }
 
@@ -115,12 +119,27 @@ func (s *ecServer) ClientStreamingEcho(stream ecpb.Echo_ClientStreamingEchoServe
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
-			fmt.Printf("echo last received message\n")
 			return stream.SendAndClose(&ecpb.EchoResponse{Message: message})
 		}
 		message = in.Message
-		fmt.Printf("request received: %v, building echo\n", in)
 		if err != nil {
+			return err
+		}
+	}
+}
+
+func (s *ecServer) BidirectionalStreamingEcho(stream ecpb.Echo_BidirectionalStreamingEchoServer) error {
+	// Read requests and send responses.
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		if err := stream.Send(&ecpb.EchoResponse{Message: in.Message}); err != nil {
 			return err
 		}
 	}
