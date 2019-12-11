@@ -73,6 +73,8 @@ func (gc *GrpcClient) ListMethods(svcName string) ([]string, error) {
 }
 
 func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) (map[string]interface{}, error) {
+	// TODO: in change to io.Reader type
+	// TODO: out change to io.Writer type
 	var in, out bytes.Buffer
 
 	reqBytes, err := json.Marshal(reqData)
