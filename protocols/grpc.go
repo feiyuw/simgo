@@ -142,7 +142,7 @@ func (gs *GrpcServer) Start() error {
 		unaryMethods := []grpc.MethodDesc{}
 		streamMethods := []grpc.StreamDesc{}
 		for _, mtd := range sd.GetMethods() {
-			logger.Debugf("protocols/grpc", "proceed method %v", mtd)
+			logger.Debugf("protocols/grpc", "try to add method: %v of service: %s", mtd, svcName)
 			if mtd.IsClientStreaming() && mtd.IsServerStreaming() {
 				streamMethods = append(streamMethods, grpc.StreamDesc{
 					StreamName:    mtd.GetName(),
@@ -165,7 +165,7 @@ func (gs *GrpcServer) Start() error {
 			} else {
 				unaryMethods = append(unaryMethods, grpc.MethodDesc{
 					MethodName: mtd.GetName(),
-					Handler:    unaryHandler,
+					Handler:    getUnaryHandler(mtd),
 				})
 			}
 		}
@@ -199,22 +199,24 @@ func listMethods(source grpcurl.DescriptorSource, serviceName string) ([]*desc.M
 	return sd.GetMethods(), nil
 }
 
-func unaryHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(hwpb.HelloRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func getUnaryHandler(mtd *desc.MethodDescriptor) func(interface{}, context.Context, func(interface{}) error, grpc.UnaryServerInterceptor) (interface{}, error) {
+	return func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+		in := new(hwpb.HelloRequest)
+		if err := dec(in); err != nil {
+			return nil, err
+		}
+		if interceptor == nil {
+			return SayHello(ctx, in)
+		}
+		info := &grpc.UnaryServerInfo{
+			Server:     srv,
+			FullMethod: mtd.GetFullyQualifiedName(),
+		}
+		handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+			return SayHello(ctx, req.(*hwpb.HelloRequest))
+		}
+		return interceptor(ctx, in, info, handler)
 	}
-	if interceptor == nil {
-		return SayHello(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/helloworld.Greeter/SayHello",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return SayHello(ctx, req.(*hwpb.HelloRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func clientStreamHandler(srv interface{}, stream grpc.ServerStream) error {

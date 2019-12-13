@@ -8,7 +8,7 @@ import (
 func main() {
 	var ch chan bool
 
-	server := protocols.NewGrpcServer(":1777", []string{"protocols/helloworld.proto"})
+	server := protocols.NewGrpcServer(":1777", []string{"protocols/helloworld.proto", "protocols/echo.proto"})
 	server.Start()
 
 	<-ch
