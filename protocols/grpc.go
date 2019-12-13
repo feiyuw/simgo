@@ -10,9 +10,9 @@ import (
 
 	"github.com/fullstorydev/grpcurl"
 	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"google.golang.org/grpc"
-	hwpb "google.golang.org/grpc/examples/helloworld/helloworld"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
@@ -201,19 +201,21 @@ func listMethods(source grpcurl.DescriptorSource, serviceName string) ([]*desc.M
 
 func getUnaryHandler(mtd *desc.MethodDescriptor) func(interface{}, context.Context, func(interface{}) error, grpc.UnaryServerInterceptor) (interface{}, error) {
 	return func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-		in := new(hwpb.HelloRequest)
+		in := dynamic.NewMessage(mtd.GetInputType())
 		if err := dec(in); err != nil {
 			return nil, err
 		}
+		out := dynamic.NewMessage(mtd.GetOutputType())
+		out.SetFieldByName("message", "hello")
 		if interceptor == nil {
-			return SayHello(ctx, in)
+			return out, nil
 		}
 		info := &grpc.UnaryServerInfo{
 			Server:     srv,
 			FullMethod: mtd.GetFullyQualifiedName(),
 		}
 		handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-			return SayHello(ctx, req.(*hwpb.HelloRequest))
+			return out, nil
 		}
 		return interceptor(ctx, in, info, handler)
 	}
@@ -240,8 +242,4 @@ type mockServerIface interface {
 
 // mock server struct for service descriptor
 type mockServer struct {
-}
-
-func SayHello(ctx context.Context, in *hwpb.HelloRequest) (*hwpb.HelloReply, error) {
-	return &hwpb.HelloReply{Message: "Hello " + in.Name}, nil
 }
