@@ -8,4 +8,17 @@
 
 ### Client Architecture
 
+[TODO]
+
 ## Server Simulator
+
+### Scenarios
+
+1. 基于一个服务的proto文件，我可以模拟一个服务接口，让它总是返回确定的内容
+1. 基于一个服务的proto文件，我可以模拟一个服务接口，让它针对不同的数据返回不同的内容
+1. 基于一个服务的proto文件，我可以模拟一个服务接口，让它延时特定的时间再返回内容
+
+### Client Architecture
+
+[TODO]
+

@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net"
 
 	"simgo/logger"
 
 	"github.com/fullstorydev/grpcurl"
+	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"google.golang.org/grpc"
+	hwpb "google.golang.org/grpc/examples/helloworld/helloworld"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
@@ -103,9 +106,140 @@ func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) 
 // ================================== server ==================================
 
 type GrpcServer struct {
+	addr   string
+	desc   grpcurl.DescriptorSource
+	server *grpc.Server
 }
 
 // create a new grpc server
-func NewGrpcServer(addr string) *GrpcServer {
-	return &GrpcServer{}
+func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *GrpcServer {
+	desc, err := grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
+	if err != nil {
+		logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
+	}
+	return &GrpcServer{addr: addr, desc: desc, server: grpc.NewServer(opts...)}
+}
+
+func (gs *GrpcServer) Start() error {
+	lis, err := net.Listen("tcp", gs.addr)
+	if err != nil {
+		return err
+	}
+	logger.Infof("protocols/grpc", "server listening at %v", lis.Addr())
+	gs.server = grpc.NewServer()
+	services, err := grpcurl.ListServices(gs.desc)
+	if err != nil {
+		logger.Error("protocols/grpc", "failed to start server")
+		return err
+	}
+	for _, svcName := range services {
+		dsc, err := gs.desc.FindSymbol(svcName)
+		if err != nil {
+			return err
+		}
+		sd := dsc.(*desc.ServiceDescriptor)
+
+		unaryMethods := []grpc.MethodDesc{}
+		streamMethods := []grpc.StreamDesc{}
+		for _, mtd := range sd.GetMethods() {
+			logger.Debugf("protocols/grpc", "proceed method %v", mtd)
+			if mtd.IsClientStreaming() && mtd.IsServerStreaming() {
+				streamMethods = append(streamMethods, grpc.StreamDesc{
+					StreamName:    mtd.GetName(),
+					Handler:       bidiStreamHandler,
+					ServerStreams: true,
+					ClientStreams: true,
+				})
+			} else if mtd.IsClientStreaming() {
+				streamMethods = append(streamMethods, grpc.StreamDesc{
+					StreamName:    mtd.GetName(),
+					Handler:       clientStreamHandler,
+					ClientStreams: true,
+				})
+			} else if mtd.IsServerStreaming() {
+				streamMethods = append(streamMethods, grpc.StreamDesc{
+					StreamName:    mtd.GetName(),
+					Handler:       serverStreamHandler,
+					ServerStreams: true,
+				})
+			} else {
+				unaryMethods = append(unaryMethods, grpc.MethodDesc{
+					MethodName: mtd.GetName(),
+					Handler:    unaryHandler,
+				})
+			}
+		}
+
+		svcDesc := grpc.ServiceDesc{
+			ServiceName: svcName,
+			HandlerType: (*mockServerIface)(nil),
+			Methods:     unaryMethods,
+			Streams:     streamMethods,
+			Metadata:    sd.GetFile().GetName(),
+		}
+		gs.server.RegisterService(&svcDesc, &mockServer{})
+	}
+
+	go func() {
+		if err := gs.server.Serve(lis); err != nil {
+			logger.Errorf("protocols/grpc", "failed to serve: %v", err)
+		}
+	}()
+
+	return nil
+}
+
+func listMethods(source grpcurl.DescriptorSource, serviceName string) ([]*desc.MethodDescriptor, error) {
+	dsc, err := source.FindSymbol(serviceName)
+	if err != nil {
+		return nil, err
+	}
+	sd := dsc.(*desc.ServiceDescriptor)
+
+	return sd.GetMethods(), nil
+}
+
+func unaryHandler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(hwpb.HelloRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return SayHello(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/helloworld.Greeter/SayHello",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return SayHello(ctx, req.(*hwpb.HelloRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func clientStreamHandler(srv interface{}, stream grpc.ServerStream) error {
+	// TODO
+	return nil
+}
+
+func serverStreamHandler(srv interface{}, stream grpc.ServerStream) error {
+	// TODO
+	return nil
+}
+
+func bidiStreamHandler(srv interface{}, stream grpc.ServerStream) error {
+	// TODO
+	return nil
+}
+
+// mock server interface for service descriptor
+type mockServerIface interface {
+}
+
+// mock server struct for service descriptor
+type mockServer struct {
+}
+
+func SayHello(ctx context.Context, in *hwpb.HelloRequest) (*hwpb.HelloReply, error) {
+	return &hwpb.HelloReply{Message: "Hello " + in.Name}, nil
 }

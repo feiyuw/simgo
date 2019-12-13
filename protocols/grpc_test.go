@@ -95,6 +95,16 @@ func TestGrpcClient(t *testing.T) {
 	})
 }
 
+func TestGrpcServer(t *testing.T) {
+	Convey("any grpc request can be handled by the same function", t, func() {
+
+	})
+
+	Convey("simulated server always return the same data", t, func() {
+
+	})
+}
+
 // hwServer is used to implement helloworld.GreeterServer.
 type hwServer struct {
 	hwpb.UnimplementedGreeterServer
