@@ -146,20 +146,20 @@ func (gs *GrpcServer) Start() error {
 			if mtd.IsClientStreaming() && mtd.IsServerStreaming() {
 				streamMethods = append(streamMethods, grpc.StreamDesc{
 					StreamName:    mtd.GetName(),
-					Handler:       bidiStreamHandler,
+					Handler:       getStreamHandler(mtd),
 					ServerStreams: true,
 					ClientStreams: true,
 				})
 			} else if mtd.IsClientStreaming() {
 				streamMethods = append(streamMethods, grpc.StreamDesc{
 					StreamName:    mtd.GetName(),
-					Handler:       clientStreamHandler,
+					Handler:       getStreamHandler(mtd),
 					ClientStreams: true,
 				})
 			} else if mtd.IsServerStreaming() {
 				streamMethods = append(streamMethods, grpc.StreamDesc{
 					StreamName:    mtd.GetName(),
-					Handler:       serverStreamHandler,
+					Handler:       getStreamHandler(mtd),
 					ServerStreams: true,
 				})
 			} else {
@@ -189,6 +189,14 @@ func (gs *GrpcServer) Start() error {
 	return nil
 }
 
+func (gs *GrpcServer) Stop() error {
+	if gs.server != nil {
+		gs.server.Stop()
+	}
+
+	return nil
+}
+
 func listMethods(source grpcurl.DescriptorSource, serviceName string) ([]*desc.MethodDescriptor, error) {
 	dsc, err := source.FindSymbol(serviceName)
 	if err != nil {
@@ -205,6 +213,7 @@ func getUnaryHandler(mtd *desc.MethodDescriptor) func(interface{}, context.Conte
 		if err := dec(in); err != nil {
 			return nil, err
 		}
+		logger.Debugf("protocols/grpc", "got incoming message: %v", in)
 		out := dynamic.NewMessage(mtd.GetOutputType())
 		out.SetFieldByName("message", "hello")
 		if interceptor == nil {
@@ -221,19 +230,10 @@ func getUnaryHandler(mtd *desc.MethodDescriptor) func(interface{}, context.Conte
 	}
 }
 
-func clientStreamHandler(srv interface{}, stream grpc.ServerStream) error {
-	// TODO
-	return nil
-}
-
-func serverStreamHandler(srv interface{}, stream grpc.ServerStream) error {
-	// TODO
-	return nil
-}
-
-func bidiStreamHandler(srv interface{}, stream grpc.ServerStream) error {
-	// TODO
-	return nil
+func getStreamHandler(mtd *desc.MethodDescriptor) func(interface{}, grpc.ServerStream) error {
+	return func(srv interface{}, stream grpc.ServerStream) error {
+		return nil
+	}
 }
 
 // mock server interface for service descriptor
