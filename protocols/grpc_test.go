@@ -101,8 +101,12 @@ func TestGrpcServer(t *testing.T) {
 	defer s.Stop()
 	time.Sleep(time.Microsecond)
 
-	Convey("simulated server always return the same data", t, func() {
+	client := NewGrpcClient("127.0.0.1:4999", []string{"echo.proto"}, grpc.WithInsecure())
 
+	Convey("simulated server always return the same data", t, func() {
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "xxxx"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "hello")
 	})
 }
 
