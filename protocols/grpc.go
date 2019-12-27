@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 
 	"simgo/logger"
@@ -106,9 +107,11 @@ func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) 
 // ================================== server ==================================
 
 type GrpcServer struct {
-	addr   string
-	desc   grpcurl.DescriptorSource
-	server *grpc.Server
+	addr            string
+	desc            grpcurl.DescriptorSource
+	server          *grpc.Server
+	handlerM        map[string]func(in *dynamic.Message, out *dynamic.Message) error
+	defaultHandlerM map[string]func(in *dynamic.Message, out *dynamic.Message) error
 }
 
 // create a new grpc server
@@ -117,7 +120,13 @@ func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *Grp
 	if err != nil {
 		logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
 	}
-	return &GrpcServer{addr: addr, desc: desc, server: grpc.NewServer(opts...)}
+	return &GrpcServer{
+		addr:            addr,
+		desc:            desc,
+		server:          grpc.NewServer(opts...),
+		handlerM:        map[string]func(in *dynamic.Message, out *dynamic.Message) error{},
+		defaultHandlerM: map[string]func(in *dynamic.Message, out *dynamic.Message) error{},
+	}
 }
 
 func (gs *GrpcServer) Start() error {
@@ -165,7 +174,7 @@ func (gs *GrpcServer) Start() error {
 			} else {
 				unaryMethods = append(unaryMethods, grpc.MethodDesc{
 					MethodName: mtd.GetName(),
-					Handler:    getUnaryHandler(mtd),
+					Handler:    gs.getUnaryHandler(mtd),
 				})
 			}
 		}
@@ -192,45 +201,78 @@ func (gs *GrpcServer) Start() error {
 func (gs *GrpcServer) Stop() error {
 	if gs.server != nil {
 		gs.server.Stop()
+		gs.server = nil
+		gs.handlerM = map[string]func(in *dynamic.Message, out *dynamic.Message) error{}
+		gs.defaultHandlerM = map[string]func(in *dynamic.Message, out *dynamic.Message) error{}
+		logger.Infof("protocols/grpc", "grpc server %s stopped", gs.addr)
 	}
 
 	return nil
 }
 
-func listMethods(source grpcurl.DescriptorSource, serviceName string) ([]*desc.MethodDescriptor, error) {
-	dsc, err := source.FindSymbol(serviceName)
-	if err != nil {
-		return nil, err
+// TODO: stream handler support
+// set specified method handler, one method only have one handler, it's the highest priority
+func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message) error) error {
+	if _, exists := gs.handlerM[mtd]; exists {
+		logger.Warnf("protocols/grpc", "handler for method %s exists, will be overrided", mtd)
 	}
-	sd := dsc.(*desc.ServiceDescriptor)
-
-	return sd.GetMethods(), nil
+	gs.handlerM[mtd] = handler
+	return nil
 }
 
-func getUnaryHandler(mtd *desc.MethodDescriptor) func(interface{}, context.Context, func(interface{}) error, grpc.UnaryServerInterceptor) (interface{}, error) {
+// TODO: stream handler support
+// set default method handler, one method only have one default handler, it's the lowest priority
+func (gs *GrpcServer) SetDefaultMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message) error) error {
+	if _, exists := gs.defaultHandlerM[mtd]; exists {
+		logger.Warnf("protocols/grpc", "default handler for method %s exists, will be overrided", mtd)
+	}
+	gs.defaultHandlerM[mtd] = handler
+	return nil
+}
+
+func (gs *GrpcServer) getMethodHandler(mtd string) (func(in *dynamic.Message, out *dynamic.Message) error, error) {
+	handler, ok := gs.handlerM[mtd]
+	if !ok {
+		handler, ok = gs.defaultHandlerM[mtd]
+		if !ok {
+			return nil, fmt.Errorf("handler for method %s not found", mtd)
+		}
+	}
+	return handler, nil
+}
+
+func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface{}, context.Context, func(interface{}) error, grpc.UnaryServerInterceptor) (interface{}, error) {
 	return func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+		handler, err := gs.getMethodHandler(mtd.GetFullyQualifiedName())
+		if err != nil {
+			return nil, err
+		}
 		in := dynamic.NewMessage(mtd.GetInputType())
 		if err := dec(in); err != nil {
 			return nil, err
 		}
-		logger.Debugf("protocols/grpc", "got incoming message: %v", in)
 		out := dynamic.NewMessage(mtd.GetOutputType())
-		out.SetFieldByName("message", "hello")
+		if err := handler(in, out); err != nil {
+			return nil, err
+		}
+
 		if interceptor == nil {
 			return out, nil
 		}
+
 		info := &grpc.UnaryServerInfo{
 			Server:     srv,
 			FullMethod: mtd.GetFullyQualifiedName(),
 		}
-		handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		wrapper := func(ctx context.Context, req interface{}) (interface{}, error) {
 			return out, nil
 		}
-		return interceptor(ctx, in, info, handler)
+		return interceptor(ctx, in, info, wrapper)
 	}
 }
 
 func getStreamHandler(mtd *desc.MethodDescriptor) func(interface{}, grpc.ServerStream) error {
+	// TODO
 	return func(srv interface{}, stream grpc.ServerStream) error {
 		return nil
 	}

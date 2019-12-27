@@ -11,6 +11,7 @@ import (
 
 	"simgo/logger"
 
+	"github.com/jhump/protoreflect/dynamic"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -97,16 +98,34 @@ func TestGrpcClient(t *testing.T) {
 
 func TestGrpcServer(t *testing.T) {
 	s := NewGrpcServer(":4999", []string{"echo.proto", "helloworld.proto"})
+	s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message) error {
+		out.SetFieldByName("message", "hello")
+		return nil
+	})
+	s.SetDefaultMethodHandler("helloworld.Greeter.SayHello", func(in *dynamic.Message, out *dynamic.Message) error {
+		out.SetFieldByName("message", in.GetFieldByName("name"))
+		return nil
+	})
 	s.Start()
 	defer s.Stop()
 	time.Sleep(time.Microsecond)
 
-	client := NewGrpcClient("127.0.0.1:4999", []string{"echo.proto"}, grpc.WithInsecure())
+	client := NewGrpcClient("127.0.0.1:4999", []string{"echo.proto", "helloworld.proto"}, grpc.WithInsecure())
 
 	Convey("simulated server always return the same data", t, func() {
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "xxxx"})
 		So(err, ShouldBeNil)
 		So(out["message"], ShouldEqual, "hello")
+	})
+
+	Convey("echo server always return the same data", t, func() {
+		out, err := client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "this is a sentence"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "this is a sentence")
+
+		out, err = client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "中文：你好世界！hello world"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "中文：你好世界！hello world")
 	})
 }
 
