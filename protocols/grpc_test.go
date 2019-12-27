@@ -127,6 +127,20 @@ func TestGrpcServer(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(out["message"], ShouldEqual, "中文：你好世界！hello world")
 	})
+
+	Convey("reply after 1 millisecond delay", t, func() {
+		s.SetMethodHandler("helloworld.Greeter.SayHello", func(in *dynamic.Message, out *dynamic.Message) error {
+			time.Sleep(time.Millisecond)
+			out.SetFieldByName("message", "after sleep")
+			return nil
+		})
+		start := time.Now().UnixNano()
+		out, err := client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "what to do"})
+		duration := time.Now().UnixNano() - start
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "after sleep")
+		So(duration, ShouldBeGreaterThanOrEqualTo, 1_000_000)
+	})
 }
 
 // hwServer is used to implement helloworld.GreeterServer.
