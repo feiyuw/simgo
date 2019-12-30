@@ -110,7 +110,7 @@ type GrpcServer struct {
 	addr     string
 	desc     grpcurl.DescriptorSource
 	server   *grpc.Server
-	handlerM map[string]func(in *dynamic.Message, out *dynamic.Message) error
+	handlerM map[string]func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error
 }
 
 // create a new grpc server
@@ -123,7 +123,7 @@ func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *Grp
 		addr:     addr,
 		desc:     descFromProto,
 		server:   grpc.NewServer(opts...),
-		handlerM: map[string]func(in *dynamic.Message, out *dynamic.Message) error{},
+		handlerM: map[string]func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error{},
 	}
 
 	gs.server = grpc.NewServer()
@@ -146,7 +146,7 @@ func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *Grp
 			if mtd.IsClientStreaming() || mtd.IsServerStreaming() {
 				streamMethods = append(streamMethods, grpc.StreamDesc{
 					StreamName:    mtd.GetName(),
-					Handler:       getStreamHandler(mtd),
+					Handler:       gs.getStreamHandler(mtd),
 					ServerStreams: mtd.IsServerStreaming(),
 					ClientStreams: mtd.IsClientStreaming(),
 				})
@@ -191,7 +191,7 @@ func (gs *GrpcServer) Stop() error {
 	if gs.server != nil {
 		gs.server.Stop()
 		gs.server = nil
-		gs.handlerM = map[string]func(in *dynamic.Message, out *dynamic.Message) error{}
+		gs.handlerM = map[string]func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error{}
 		logger.Infof("protocols/grpc", "grpc server %s stopped", gs.addr)
 	}
 
@@ -200,7 +200,7 @@ func (gs *GrpcServer) Stop() error {
 
 // TODO: stream handler support
 // set specified method handler, one method only have one handler, it's the highest priority
-func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message) error) error {
+func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error) error {
 	if _, exists := gs.handlerM[mtd]; exists {
 		logger.Warnf("protocols/grpc", "handler for method %s exists, will be overrided", mtd)
 	}
@@ -208,7 +208,7 @@ func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Mess
 	return nil
 }
 
-func (gs *GrpcServer) getMethodHandler(mtd string) (func(in *dynamic.Message, out *dynamic.Message) error, error) {
+func (gs *GrpcServer) getMethodHandler(mtd string) (func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error, error) {
 	handler, ok := gs.handlerM[mtd]
 	if !ok {
 		return nil, fmt.Errorf("handler for method %s not found", mtd)
@@ -227,7 +227,7 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 			return nil, err
 		}
 		out := dynamic.NewMessage(mtd.GetOutputType())
-		if err := handler(in, out); err != nil {
+		if err := handler(in, out, nil); err != nil {
 			return nil, err
 		}
 
@@ -246,12 +246,17 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 	}
 }
 
-func getStreamHandler(mtd *desc.MethodDescriptor) func(interface{}, grpc.ServerStream) error {
-	// TODO: handler with stream parameter
+func (gs *GrpcServer) getStreamHandler(mtd *desc.MethodDescriptor) func(interface{}, grpc.ServerStream) error {
 	return func(srv interface{}, stream grpc.ServerStream) error {
+		handler, err := gs.getMethodHandler(mtd.GetFullyQualifiedName())
+		if err != nil {
+			return err
+		}
+		in := dynamic.NewMessage(mtd.GetInputType())
 		out := dynamic.NewMessage(mtd.GetOutputType())
-		out.SetFieldByName("message", "dodododo")
-		stream.SendMsg(out)
+		if err := handler(in, out, stream); err != nil {
+			return err
+		}
 		return nil
 	}
 }

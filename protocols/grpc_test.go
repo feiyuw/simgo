@@ -98,11 +98,11 @@ func TestGrpcClient(t *testing.T) {
 
 func TestGrpcServer(t *testing.T) {
 	s := NewGrpcServer(":4999", []string{"echo.proto", "helloworld.proto"})
-	s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message) error {
+	s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 		out.SetFieldByName("message", "hello")
 		return nil
 	})
-	s.SetMethodHandler("helloworld.Greeter.SayHello", func(in *dynamic.Message, out *dynamic.Message) error {
+	s.SetMethodHandler("helloworld.Greeter.SayHello", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 		out.SetFieldByName("message", in.GetFieldByName("name"))
 		return nil
 	})
@@ -129,11 +129,11 @@ func TestGrpcServer(t *testing.T) {
 	})
 
 	Convey("change method handler", t, func() {
-		s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message) error {
+		s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 			out.SetFieldByName("message", "world")
 			return nil
 		})
-		defer s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message) error {
+		defer s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 			out.SetFieldByName("message", "hello")
 			return nil
 		})
@@ -143,7 +143,7 @@ func TestGrpcServer(t *testing.T) {
 	})
 
 	Convey("reply after 1 millisecond delay", t, func() {
-		s.SetMethodHandler("helloworld.Greeter.SayHello", func(in *dynamic.Message, out *dynamic.Message) error {
+		s.SetMethodHandler("helloworld.Greeter.SayHello", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 			time.Sleep(time.Millisecond)
 			out.SetFieldByName("message", "after sleep")
 			return nil
@@ -157,8 +157,10 @@ func TestGrpcServer(t *testing.T) {
 	})
 
 	Convey("streaming API", t, func() {
-		s.SetMethodHandler("grpc.examples.echo.Echo.BidirectionalStreamingEcho", func(in *dynamic.Message, out *dynamic.Message) error {
+		s.SetMethodHandler("grpc.examples.echo.Echo.BidirectionalStreamingEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 			out.SetFieldByName("message", "dodododo")
+			stream.RecvMsg(in)
+			stream.SendMsg(out)
 			return nil
 		})
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.BidirectionalStreamingEcho", map[string]interface{}{"message": "xxxx"})
