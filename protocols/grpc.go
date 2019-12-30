@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"reflect"
 
 	"simgo/logger"
 
@@ -111,15 +112,25 @@ func (rr *rpcResponse) ToJSON() (interface{}, error) {
 	}
 }
 
-func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) (interface{}, error) {
+func (gc *GrpcClient) InvokeRPC(mtdName string, reqData interface{}) (interface{}, error) {
 	var in bytes.Buffer
 	var out = rpcResponse{messages: []bytes.Buffer{}}
 
-	reqBytes, err := json.Marshal(reqData)
-	if err != nil {
-		return nil, err
+	if reflect.TypeOf(reqData).Kind() == reflect.Slice { // multi request data
+		for _, data := range reqData.([]map[string]interface{}) {
+			reqBytes, err := json.Marshal(data)
+			if err != nil {
+				return nil, err
+			}
+			in.Write(reqBytes)
+		}
+	} else {
+		reqBytes, err := json.Marshal(reqData)
+		if err != nil {
+			return nil, err
+		}
+		in.Write(reqBytes)
 	}
-	in.Write(reqBytes)
 
 	rf, formatter, err := grpcurl.RequestParserAndFormatterFor(grpcurl.FormatJSON, gc.desc, true, false, &in)
 	if err != nil {

@@ -157,15 +157,29 @@ func TestGrpcServer(t *testing.T) {
 	})
 
 	Convey("client streaming API", t, func() {
+		recvedMsgs := make([]*dynamic.Message, 0)
 		s.SetMethodHandler("grpc.examples.echo.Echo.ClientStreamingEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
-			stream.RecvMsg(in)
-			out.SetFieldByName("message", in.GetFieldByName("message"))
+			for {
+				msg := dynamic.NewMessage(in.GetMessageDescriptor())
+				err := stream.RecvMsg(msg)
+				if err == io.EOF {
+					break
+				}
+				recvedMsgs = append(recvedMsgs, msg)
+			}
+			out.SetFieldByName("message", "xxxyyy")
 			stream.SendMsg(out)
 			return nil
 		})
-		out, err := client.InvokeRPC("grpc.examples.echo.Echo.ClientStreamingEcho", map[string]interface{}{"message": "xxxx"})
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.ClientStreamingEcho", []map[string]interface{}{
+			map[string]interface{}{"message": "xxxx"},
+			map[string]interface{}{"message": "yyyy"},
+		})
 		So(err, ShouldBeNil)
-		So(out.(map[string]interface{})["message"], ShouldEqual, "xxxx")
+		So(len(recvedMsgs), ShouldEqual, 2)
+		So(recvedMsgs[0].GetFieldByName("message"), ShouldEqual, "xxxx")
+		So(recvedMsgs[1].GetFieldByName("message"), ShouldEqual, "yyyy")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "xxxyyy")
 	})
 
 	Convey("server streaming API", t, func() {
