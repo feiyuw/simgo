@@ -152,24 +152,13 @@ func (gs *GrpcServer) Start() error {
 		streamMethods := []grpc.StreamDesc{}
 		for _, mtd := range sd.GetMethods() {
 			logger.Debugf("protocols/grpc", "try to add method: %v of service: %s", mtd, svcName)
-			if mtd.IsClientStreaming() && mtd.IsServerStreaming() {
+
+			if mtd.IsClientStreaming() || mtd.IsServerStreaming() {
 				streamMethods = append(streamMethods, grpc.StreamDesc{
 					StreamName:    mtd.GetName(),
 					Handler:       getStreamHandler(mtd),
-					ServerStreams: true,
-					ClientStreams: true,
-				})
-			} else if mtd.IsClientStreaming() {
-				streamMethods = append(streamMethods, grpc.StreamDesc{
-					StreamName:    mtd.GetName(),
-					Handler:       getStreamHandler(mtd),
-					ClientStreams: true,
-				})
-			} else if mtd.IsServerStreaming() {
-				streamMethods = append(streamMethods, grpc.StreamDesc{
-					StreamName:    mtd.GetName(),
-					Handler:       getStreamHandler(mtd),
-					ServerStreams: true,
+					ServerStreams: mtd.IsServerStreaming(),
+					ClientStreams: mtd.IsClientStreaming(),
 				})
 			} else {
 				unaryMethods = append(unaryMethods, grpc.MethodDesc{
@@ -272,8 +261,11 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 }
 
 func getStreamHandler(mtd *desc.MethodDescriptor) func(interface{}, grpc.ServerStream) error {
-	// TODO
+	// TODO: handler with stream parameter
 	return func(srv interface{}, stream grpc.ServerStream) error {
+		out := dynamic.NewMessage(mtd.GetOutputType())
+		out.SetFieldByName("message", "dodododo")
+		stream.SendMsg(out)
 		return nil
 	}
 }

@@ -141,6 +141,16 @@ func TestGrpcServer(t *testing.T) {
 		So(out["message"], ShouldEqual, "after sleep")
 		So(duration, ShouldBeGreaterThanOrEqualTo, 1_000_000)
 	})
+
+	Convey("streaming API", t, func() {
+		s.SetMethodHandler("grpc.examples.echo.Echo.BidirectionalStreamingEcho", func(in *dynamic.Message, out *dynamic.Message) error {
+			out.SetFieldByName("message", "dodododo")
+			return nil
+		})
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.BidirectionalStreamingEcho", map[string]interface{}{"message": "xxxx"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "dodododo")
+	})
 }
 
 // hwServer is used to implement helloworld.GreeterServer.
