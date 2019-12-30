@@ -74,25 +74,25 @@ func TestGrpcClient(t *testing.T) {
 		client := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto"}, grpc.WithInsecure())
 		out, err := client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "you"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "Hello you")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "Hello you")
 	})
 
 	Convey("invoke rpc of sync method without proto files", t, func() {
 		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "hello"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "hello")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "hello")
 	})
 
 	Convey("invoke rpc of streaming method", t, func() {
 		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.ClientStreamingEcho", map[string]interface{}{"message": "hello"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "hello")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "hello")
 
 		out, err = client.InvokeRPC("grpc.examples.echo.Echo.BidirectionalStreamingEcho", map[string]interface{}{"message": "hello"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "hello")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "hello")
 	})
 }
 
@@ -115,17 +115,17 @@ func TestGrpcServer(t *testing.T) {
 	Convey("simulated server always return the same data", t, func() {
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "xxxx"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "hello")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "hello")
 	})
 
 	Convey("echo server always return the same data", t, func() {
 		out, err := client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "this is a sentence"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "this is a sentence")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "this is a sentence")
 
 		out, err = client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "中文：你好世界！hello world"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "中文：你好世界！hello world")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "中文：你好世界！hello world")
 	})
 
 	Convey("change method handler", t, func() {
@@ -139,7 +139,7 @@ func TestGrpcServer(t *testing.T) {
 		})
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "xxxx"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "world")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "world")
 	})
 
 	Convey("reply after 1 millisecond delay", t, func() {
@@ -152,11 +152,38 @@ func TestGrpcServer(t *testing.T) {
 		out, err := client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "what to do"})
 		duration := time.Now().UnixNano() - start
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "after sleep")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "after sleep")
 		So(duration, ShouldBeGreaterThanOrEqualTo, 1_000_000)
 	})
 
-	Convey("streaming API", t, func() {
+	Convey("client streaming API", t, func() {
+		s.SetMethodHandler("grpc.examples.echo.Echo.ClientStreamingEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
+			stream.RecvMsg(in)
+			out.SetFieldByName("message", in.GetFieldByName("message"))
+			stream.SendMsg(out)
+			return nil
+		})
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.ClientStreamingEcho", map[string]interface{}{"message": "xxxx"})
+		So(err, ShouldBeNil)
+		So(out.(map[string]interface{})["message"], ShouldEqual, "xxxx")
+	})
+
+	Convey("server streaming API", t, func() {
+		s.SetMethodHandler("grpc.examples.echo.Echo.ServerStreamingEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
+			stream.RecvMsg(in)
+			out.SetFieldByName("message", in.GetFieldByName("message"))
+			stream.SendMsg(out)
+			out.SetFieldByName("message", "end")
+			stream.SendMsg(out)
+			return nil
+		})
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.ServerStreamingEcho", map[string]interface{}{"message": "xxxx"})
+		So(err, ShouldBeNil)
+		So(out.([]map[string]interface{})[0]["message"], ShouldEqual, "xxxx")
+		So(out.([]map[string]interface{})[1]["message"], ShouldEqual, "end")
+	})
+
+	Convey("bidi streaming API", t, func() {
 		s.SetMethodHandler("grpc.examples.echo.Echo.BidirectionalStreamingEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 			out.SetFieldByName("message", "dodododo")
 			stream.RecvMsg(in)
@@ -165,7 +192,7 @@ func TestGrpcServer(t *testing.T) {
 		})
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.BidirectionalStreamingEcho", map[string]interface{}{"message": "xxxx"})
 		So(err, ShouldBeNil)
-		So(out["message"], ShouldEqual, "dodododo")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "dodododo")
 	})
 }
 

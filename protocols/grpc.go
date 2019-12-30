@@ -76,10 +76,44 @@ func (gc *GrpcClient) ListMethods(svcName string) ([]string, error) {
 	return mtds, nil
 }
 
-func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) (map[string]interface{}, error) {
-	// TODO: in change to io.Reader type
-	// TODO: out change to io.Writer type
-	var in, out bytes.Buffer
+type rpcResponse struct {
+	messages []bytes.Buffer
+}
+
+func (rr *rpcResponse) Write(p []byte) (int, error) {
+	var msg bytes.Buffer
+	n, err := msg.Write(p)
+	rr.messages = append(rr.messages, msg)
+	return n, err
+}
+
+func (rr *rpcResponse) ToJSON() (interface{}, error) {
+	switch len(rr.messages) {
+	case 0:
+		return map[string]interface{}{}, nil
+	case 1:
+		resp := make(map[string]interface{})
+		if err := json.Unmarshal(rr.messages[0].Bytes(), &resp); err != nil {
+			return nil, err
+		}
+
+		return resp, nil
+	default:
+		resp := make([]map[string]interface{}, len(rr.messages))
+		for idx, msg := range rr.messages {
+			oneResp := make(map[string]interface{})
+			if err := json.Unmarshal(msg.Bytes(), &oneResp); err != nil {
+				return nil, err
+			}
+			resp[idx] = oneResp
+		}
+		return resp, nil
+	}
+}
+
+func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) (interface{}, error) {
+	var in bytes.Buffer
+	var out = rpcResponse{messages: []bytes.Buffer{}}
 
 	reqBytes, err := json.Marshal(reqData)
 	if err != nil {
@@ -96,12 +130,7 @@ func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) 
 		return nil, err
 	}
 
-	resp := make(map[string]interface{})
-	if err = json.Unmarshal(out.Bytes(), &resp); err != nil {
-		return nil, err
-	}
-
-	return resp, nil
+	return out.ToJSON()
 }
 
 // ================================== server ==================================
@@ -198,7 +227,6 @@ func (gs *GrpcServer) Stop() error {
 	return nil
 }
 
-// TODO: stream handler support
 // set specified method handler, one method only have one handler, it's the highest priority
 func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error) error {
 	if _, exists := gs.handlerM[mtd]; exists {
