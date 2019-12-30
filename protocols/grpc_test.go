@@ -102,7 +102,7 @@ func TestGrpcServer(t *testing.T) {
 		out.SetFieldByName("message", "hello")
 		return nil
 	})
-	s.SetDefaultMethodHandler("helloworld.Greeter.SayHello", func(in *dynamic.Message, out *dynamic.Message) error {
+	s.SetMethodHandler("helloworld.Greeter.SayHello", func(in *dynamic.Message, out *dynamic.Message) error {
 		out.SetFieldByName("message", in.GetFieldByName("name"))
 		return nil
 	})

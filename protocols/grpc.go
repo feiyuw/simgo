@@ -107,11 +107,10 @@ func (gc *GrpcClient) InvokeRPC(mtdName string, reqData map[string]interface{}) 
 // ================================== server ==================================
 
 type GrpcServer struct {
-	addr            string
-	desc            grpcurl.DescriptorSource
-	server          *grpc.Server
-	handlerM        map[string]func(in *dynamic.Message, out *dynamic.Message) error
-	defaultHandlerM map[string]func(in *dynamic.Message, out *dynamic.Message) error
+	addr     string
+	desc     grpcurl.DescriptorSource
+	server   *grpc.Server
+	handlerM map[string]func(in *dynamic.Message, out *dynamic.Message) error
 }
 
 // create a new grpc server
@@ -121,11 +120,10 @@ func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *Grp
 		logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
 	}
 	gs := &GrpcServer{
-		addr:            addr,
-		desc:            descFromProto,
-		server:          grpc.NewServer(opts...),
-		handlerM:        map[string]func(in *dynamic.Message, out *dynamic.Message) error{},
-		defaultHandlerM: map[string]func(in *dynamic.Message, out *dynamic.Message) error{},
+		addr:     addr,
+		desc:     descFromProto,
+		server:   grpc.NewServer(opts...),
+		handlerM: map[string]func(in *dynamic.Message, out *dynamic.Message) error{},
 	}
 
 	gs.server = grpc.NewServer()
@@ -194,7 +192,6 @@ func (gs *GrpcServer) Stop() error {
 		gs.server.Stop()
 		gs.server = nil
 		gs.handlerM = map[string]func(in *dynamic.Message, out *dynamic.Message) error{}
-		gs.defaultHandlerM = map[string]func(in *dynamic.Message, out *dynamic.Message) error{}
 		logger.Infof("protocols/grpc", "grpc server %s stopped", gs.addr)
 	}
 
@@ -211,23 +208,10 @@ func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Mess
 	return nil
 }
 
-// TODO: stream handler support
-// set default method handler, one method only have one default handler, it's the lowest priority
-func (gs *GrpcServer) SetDefaultMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message) error) error {
-	if _, exists := gs.defaultHandlerM[mtd]; exists {
-		logger.Warnf("protocols/grpc", "default handler for method %s exists, will be overrided", mtd)
-	}
-	gs.defaultHandlerM[mtd] = handler
-	return nil
-}
-
 func (gs *GrpcServer) getMethodHandler(mtd string) (func(in *dynamic.Message, out *dynamic.Message) error, error) {
 	handler, ok := gs.handlerM[mtd]
 	if !ok {
-		handler, ok = gs.defaultHandlerM[mtd]
-		if !ok {
-			return nil, fmt.Errorf("handler for method %s not found", mtd)
-		}
+		return nil, fmt.Errorf("handler for method %s not found", mtd)
 	}
 	return handler, nil
 }
