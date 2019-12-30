@@ -108,7 +108,7 @@ func TestGrpcServer(t *testing.T) {
 	})
 	s.Start()
 	defer s.Stop()
-	time.Sleep(time.Microsecond)
+	time.Sleep(time.Millisecond) // make sure server started
 
 	client := NewGrpcClient("127.0.0.1:4999", []string{"echo.proto", "helloworld.proto"}, grpc.WithInsecure())
 
@@ -126,6 +126,20 @@ func TestGrpcServer(t *testing.T) {
 		out, err = client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "中文：你好世界！hello world"})
 		So(err, ShouldBeNil)
 		So(out["message"], ShouldEqual, "中文：你好世界！hello world")
+	})
+
+	Convey("change method handler", t, func() {
+		s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message) error {
+			out.SetFieldByName("message", "world")
+			return nil
+		})
+		defer s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message) error {
+			out.SetFieldByName("message", "hello")
+			return nil
+		})
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "xxxx"})
+		So(err, ShouldBeNil)
+		So(out["message"], ShouldEqual, "world")
 	})
 
 	Convey("reply after 1 millisecond delay", t, func() {
