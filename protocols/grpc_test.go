@@ -199,14 +199,30 @@ func TestGrpcServer(t *testing.T) {
 
 	Convey("bidi streaming API", t, func() {
 		s.SetMethodHandler("grpc.examples.echo.Echo.BidirectionalStreamingEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
-			out.SetFieldByName("message", "dodododo")
-			stream.RecvMsg(in)
-			stream.SendMsg(out)
+			for {
+				if err := stream.RecvMsg(in); err == io.EOF {
+					break
+				}
+				out.SetFieldByName("message", in.GetFieldByName("message"))
+				stream.SendMsg(out)
+			}
 			return nil
 		})
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.BidirectionalStreamingEcho", map[string]interface{}{"message": "xxxx"})
 		So(err, ShouldBeNil)
-		So(out.(map[string]interface{})["message"], ShouldEqual, "dodododo")
+		So(out.(map[string]interface{})["message"], ShouldEqual, "xxxx")
+
+		out, err = client.InvokeRPC("grpc.examples.echo.Echo.BidirectionalStreamingEcho", []map[string]interface{}{
+			map[string]interface{}{"message": "a"},
+			map[string]interface{}{"message": "b"},
+			map[string]interface{}{"message": "c"},
+		})
+		So(err, ShouldBeNil)
+		outSlice := out.([]map[string]interface{})
+		So(len(outSlice), ShouldEqual, 3)
+		So(outSlice[0]["message"], ShouldEqual, "a")
+		So(outSlice[1]["message"], ShouldEqual, "b")
+		So(outSlice[2]["message"], ShouldEqual, "c")
 	})
 }
 
