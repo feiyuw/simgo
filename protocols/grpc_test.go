@@ -153,7 +153,7 @@ func TestGrpcServer(t *testing.T) {
 		duration := time.Now().UnixNano() - start
 		So(err, ShouldBeNil)
 		So(out.(map[string]interface{})["message"], ShouldEqual, "after sleep")
-		So(duration, ShouldBeGreaterThanOrEqualTo, 1_000_000)
+		So(duration, ShouldBeGreaterThanOrEqualTo, 1000000)
 	})
 
 	Convey("client streaming API", t, func() {
