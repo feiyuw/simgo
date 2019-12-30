@@ -116,35 +116,27 @@ type GrpcServer struct {
 
 // create a new grpc server
 func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *GrpcServer {
-	desc, err := grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
+	descFromProto, err := grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
 	if err != nil {
 		logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
 	}
-	return &GrpcServer{
+	gs := &GrpcServer{
 		addr:            addr,
-		desc:            desc,
+		desc:            descFromProto,
 		server:          grpc.NewServer(opts...),
 		handlerM:        map[string]func(in *dynamic.Message, out *dynamic.Message) error{},
 		defaultHandlerM: map[string]func(in *dynamic.Message, out *dynamic.Message) error{},
 	}
-}
 
-func (gs *GrpcServer) Start() error {
-	lis, err := net.Listen("tcp", gs.addr)
-	if err != nil {
-		return err
-	}
-	logger.Infof("protocols/grpc", "server listening at %v", lis.Addr())
 	gs.server = grpc.NewServer()
 	services, err := grpcurl.ListServices(gs.desc)
 	if err != nil {
-		logger.Error("protocols/grpc", "failed to start server")
-		return err
+		logger.Fatalf("protocols/grpc", "failed to list services")
 	}
 	for _, svcName := range services {
 		dsc, err := gs.desc.FindSymbol(svcName)
 		if err != nil {
-			return err
+			logger.Fatal("protocols/grpc", err)
 		}
 		sd := dsc.(*desc.ServiceDescriptor)
 
@@ -177,6 +169,16 @@ func (gs *GrpcServer) Start() error {
 		}
 		gs.server.RegisterService(&svcDesc, &mockServer{})
 	}
+
+	return gs
+}
+
+func (gs *GrpcServer) Start() error {
+	lis, err := net.Listen("tcp", gs.addr)
+	if err != nil {
+		return err
+	}
+	logger.Infof("protocols/grpc", "server listening at %v", lis.Addr())
 
 	go func() {
 		if err := gs.server.Serve(lis); err != nil {
