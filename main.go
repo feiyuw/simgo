@@ -1,15 +1,18 @@
 package main
 
 import (
-	"simgo/protocols"
+	"flag"
+	"simgo/logger"
+	"simgo/ops"
 )
 
-// client: grpcurl -plaintext -proto ../../private/simgo/protocols/helloworld.proto -d '{"name": "world"}' 127.0.0.1:1777 helloworld.Greeter/SayHello
+var (
+	addr = ""
+)
+
 func main() {
-	var ch chan bool
-
-	server := protocols.NewGrpcServer(":1777", []string{"protocols/helloworld.proto", "protocols/echo.proto"})
-	server.Start()
-
-	<-ch
+	flag.StringVar(&addr, "addr", ":1777", "OPS addr")
+	flag.Parse()
+	logger.Infof("main", "start OPS on %s", addr)
+	ops.Start(addr)
 }

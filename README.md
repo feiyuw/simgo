@@ -1,3 +1,5 @@
+simgo是一个统一的服务模拟服务，常用于契约测试。
+
 ## Client Simulator
 
 ### Scenarios
