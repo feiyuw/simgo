@@ -20,5 +20,10 @@ func Start(addr string) {
 
 	// routes
 	opsServer.Static("/static", "www")
+	opsServer.GET("/api/clients", listClients)
+	opsServer.POST("/api/clients", newClient)
+	opsServer.GET("/api/servers", listServers)
+	opsServer.POST("/api/servers", newServer)
+
 	logger.Fatal("ops", opsServer.Start(addr))
 }

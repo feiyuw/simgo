@@ -1,4 +1,5 @@
 simgo是一个统一的服务模拟服务，常用于契约测试。
+[![Build Status](https://travis-ci.org/feiyuw/simgo.svg?branch=master)](https://travis-ci.org/feiyuw/simgo)
 
 ## Client Simulator
 
