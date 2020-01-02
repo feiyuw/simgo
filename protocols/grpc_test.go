@@ -12,6 +12,7 @@ import (
 	"simgo/logger"
 
 	"github.com/jhump/protoreflect/dynamic"
+	"github.com/robertkrimen/otto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
@@ -140,6 +141,26 @@ func TestGrpcServer(t *testing.T) {
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "xxxx"})
 		So(err, ShouldBeNil)
 		So(out.(map[string]interface{})["message"], ShouldEqual, "world")
+	})
+
+	Convey("use javascript handler", t, func() {
+		s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
+			vm := otto.New()
+			vm.Set("ctx", map[string]interface{}{
+				"in":     in,
+				"out":    out,
+				"stream": stream,
+			})
+			vm.Run(`ctx.out.SetFieldByName("message", "javascript")`)
+			return nil
+		})
+		defer s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
+			out.SetFieldByName("message", "hello")
+			return nil
+		})
+		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "zxyabc"})
+		So(err, ShouldBeNil)
+		So(out.(map[string]interface{})["message"], ShouldEqual, "javascript")
 	})
 
 	Convey("reply after 1 millisecond delay", t, func() {
