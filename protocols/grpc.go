@@ -200,7 +200,7 @@ func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *Grp
 
 		svcDesc := grpc.ServiceDesc{
 			ServiceName: svcName,
-			HandlerType: (*mockServerIface)(nil),
+			HandlerType: (*interface{})(nil),
 			Methods:     unaryMethods,
 			Streams:     streamMethods,
 			Metadata:    sd.GetFile().GetName(),
@@ -239,6 +239,7 @@ func (gs *GrpcServer) Stop() error {
 }
 
 // set specified method handler, one method only have one handler, it's the highest priority
+// if you want to return error, see https://github.com/avinassh/grpc-errors/blob/master/go/server.go
 func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error) error {
 	if _, exists := gs.handlerM[mtd]; exists {
 		logger.Warnf("protocols/grpc", "handler for method %s exists, will be overrided", mtd)
@@ -298,10 +299,6 @@ func (gs *GrpcServer) getStreamHandler(mtd *desc.MethodDescriptor) func(interfac
 		}
 		return nil
 	}
-}
-
-// mock server interface for service descriptor
-type mockServerIface interface {
 }
 
 // mock server struct for service descriptor
