@@ -25,7 +25,7 @@ func TestGrpcClient(t *testing.T) {
 	defer s.Stop()
 
 	Convey("proto files have higher priority than server reflection", t, func() {
-		client := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto"}, grpc.WithInsecure())
+		client, _ := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto"}, grpc.WithInsecure())
 		svcs, err := client.ListServices()
 		So(err, ShouldBeNil)
 		So(len(svcs), ShouldEqual, 1)
@@ -36,7 +36,7 @@ func TestGrpcClient(t *testing.T) {
 	})
 
 	Convey("list grpc services and methos from multi proto files", t, func() {
-		client := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto", "echo.proto"}, grpc.WithInsecure())
+		client, _ := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto", "echo.proto"}, grpc.WithInsecure())
 		svcs, err := client.ListServices()
 		So(err, ShouldBeNil)
 		So(svcs, ShouldResemble, []string{"grpc.examples.echo.Echo", "helloworld.Greeter"})
@@ -55,7 +55,7 @@ func TestGrpcClient(t *testing.T) {
 	})
 
 	Convey("list grpc services and methods from server reflection", t, func() {
-		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
+		client, _ := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
 		svcs, err := client.ListServices()
 		So(err, ShouldBeNil)
 		So(len(svcs), ShouldEqual, 3)
@@ -72,21 +72,21 @@ func TestGrpcClient(t *testing.T) {
 	})
 
 	Convey("invoke rpc of sync method with proto files", t, func() {
-		client := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto"}, grpc.WithInsecure())
+		client, _ := NewGrpcClient("127.0.0.1:3999", []string{"helloworld.proto"}, grpc.WithInsecure())
 		out, err := client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "you"})
 		So(err, ShouldBeNil)
 		So(out.(map[string]interface{})["message"], ShouldEqual, "Hello you")
 	})
 
 	Convey("invoke rpc of sync method without proto files", t, func() {
-		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
+		client, _ := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "hello"})
 		So(err, ShouldBeNil)
 		So(out.(map[string]interface{})["message"], ShouldEqual, "hello")
 	})
 
 	Convey("invoke rpc of streaming method", t, func() {
-		client := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
+		client, _ := NewGrpcClient("127.0.0.1:3999", []string{}, grpc.WithInsecure())
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.ClientStreamingEcho", map[string]interface{}{"message": "hello"})
 		So(err, ShouldBeNil)
 		So(out.(map[string]interface{})["message"], ShouldEqual, "hello")
@@ -98,7 +98,7 @@ func TestGrpcClient(t *testing.T) {
 }
 
 func TestGrpcServer(t *testing.T) {
-	s := NewGrpcServer(":4999", []string{"echo.proto", "helloworld.proto"})
+	s, _ := NewGrpcServer(":4999", []string{"echo.proto", "helloworld.proto"})
 	s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 		out.SetFieldByName("message", "hello")
 		return nil
@@ -111,7 +111,7 @@ func TestGrpcServer(t *testing.T) {
 	defer s.Stop()
 	time.Sleep(time.Millisecond) // make sure server started
 
-	client := NewGrpcClient("127.0.0.1:4999", []string{"echo.proto", "helloworld.proto"}, grpc.WithInsecure())
+	client, _ := NewGrpcClient("127.0.0.1:4999", []string{"echo.proto", "helloworld.proto"}, grpc.WithInsecure())
 
 	Convey("simulated server always return the same data", t, func() {
 		out, err := client.InvokeRPC("grpc.examples.echo.Echo.UnaryEcho", map[string]interface{}{"message": "xxxx"})

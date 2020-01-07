@@ -33,24 +33,24 @@ type GrpcClient struct {
 // Create a new grpc client
 // if protos set, will get services and methods from proto files
 // if addr set but protos empty, will get services and methods from server reflection
-func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) *GrpcClient {
+func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) (*GrpcClient, error) {
 	var descSource grpcurl.DescriptorSource
 
 	if addr == "" {
-		logger.Fatal("protocols/grpc", "addr should not be empty")
+		return nil, fmt.Errorf("addr should not be empty")
 	}
 
 	conn, err := grpc.Dial(addr, opts...)
 	if err != nil {
-		logger.Fatalf("protocols/grpc", "did not connect: %v", err)
+		return nil, fmt.Errorf("did not connect: %v", err)
 	}
 
 	if len(protos) > 0 {
 		descSource, err := grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
 		if err != nil {
-			logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
+			return nil, fmt.Errorf("cannot parse proto file: %v", err)
 		}
-		return &GrpcClient{addr: addr, conn: conn, desc: descSource}
+		return &GrpcClient{addr: addr, conn: conn, desc: descSource}, nil
 	}
 
 	// fetch from server reflection RPC
@@ -58,7 +58,7 @@ func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) *GrpcC
 	refClient := grpcreflect.NewClient(ctx, c)
 	descSource = grpcurl.DescriptorSourceFromServer(ctx, refClient)
 
-	return &GrpcClient{addr: addr, conn: conn, desc: descSource}
+	return &GrpcClient{addr: addr, conn: conn, desc: descSource}, nil
 }
 
 func (gc *GrpcClient) ListServices() ([]string, error) {
@@ -154,10 +154,10 @@ type GrpcServer struct {
 }
 
 // create a new grpc server
-func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *GrpcServer {
+func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) (*GrpcServer, error) {
 	descFromProto, err := grpcurl.DescriptorSourceFromProtoFiles([]string{}, protos...)
 	if err != nil {
-		logger.Fatalf("protocols/grpc", "cannot parse proto file: %v", err)
+		return nil, fmt.Errorf("cannot parse proto file: %v", err)
 	}
 	gs := &GrpcServer{
 		addr:     addr,
@@ -169,12 +169,12 @@ func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *Grp
 	gs.server = grpc.NewServer()
 	services, err := grpcurl.ListServices(gs.desc)
 	if err != nil {
-		logger.Fatalf("protocols/grpc", "failed to list services")
+		return nil, fmt.Errorf("failed to list services")
 	}
 	for _, svcName := range services {
 		dsc, err := gs.desc.FindSymbol(svcName)
 		if err != nil {
-			logger.Fatal("protocols/grpc", err)
+			return nil, fmt.Errorf("unable to find service: %s, error: %v", svcName, err)
 		}
 		sd := dsc.(*desc.ServiceDescriptor)
 
@@ -208,7 +208,7 @@ func NewGrpcServer(addr string, protos []string, opts ...grpc.ServerOption) *Grp
 		gs.server.RegisterService(&svcDesc, &mockServer{})
 	}
 
-	return gs
+	return gs, nil
 }
 
 func (gs *GrpcServer) Start() error {
