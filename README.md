@@ -1,27 +1,36 @@
 simgo是一个统一的服务模拟服务，常用于契约测试。
+
 [![Build Status](https://travis-ci.org/feiyuw/simgo.svg?branch=master)](https://travis-ci.org/feiyuw/simgo)
 
-## Client Simulator
+simgo同时支持客户端和服务端的协议模拟，当前支持的协议包括：
 
-### Scenarios
+- [x] gRPC
+- [ ] HTTP
+- [ ] Dubbo
 
-- [x] 知道grpc服务的IP:PORT，我可以知道这个服务暴露的rpc方法有哪些
-- [x] 能向某个grpc服务发送请求，并得到正确的返回
-- [x] 当grpc服务出错时，client能得到错误信息
+你可以将simgo作为library用于工具和单元测试，也可以直接用作测试工具。
 
-### Client Architecture
+## Example
 
-[TODO]
+```go
+# mock server
+import (
+    "github.com/feiyuw/simgo"
+)
 
-## Server Simulator
+var (
+    ch = make(chan, bool)
+)
 
-### Scenarios
+func main() {
+    s, _ := simgo.protocols.NewGrpcServer(":4999", []string{"echo.proto"})
+	s.SetMethodHandler("grpc.examples.echo.Echo.UnaryEcho", func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
+		out.SetFieldByName("message", in.GetFieldByName("message"))
+		return nil
+	})
+	s.Start()
+	<- ch
+}
+```
 
-- [x] 基于一个服务的proto文件，我可以模拟一个服务接口，让它总是返回确定的内容
-- [x] 基于一个服务的proto文件，我可以模拟一个服务接口，让它针对不同的数据返回不同的内容
-- [x] 基于一个服务的proto文件，我可以模拟一个服务接口，让它延时特定的时间再返回内容
-
-### Client Architecture
-
-[TODO]
 

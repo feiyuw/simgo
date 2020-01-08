@@ -15,15 +15,15 @@ func Start(addr string) {
 	opsServer.Use(middleware.Logger())
 	opsServer.Use(middleware.Recover())
 	opsServer.Pre(middleware.Rewrite(map[string]string{
-		"/": "/static/index.html",
+		"/": "/index.html",
 	}))
 
 	// routes
-	opsServer.Static("/static", "www")
 	opsServer.GET("/api/clients", listClients)
 	opsServer.POST("/api/clients", newClient)
 	opsServer.GET("/api/servers", listServers)
 	opsServer.POST("/api/servers", newServer)
+	opsServer.Static("/", "www/build")
 
 	logger.Fatal("ops", opsServer.Start(addr))
 }
