@@ -1,5 +1,5 @@
 import React from 'react'
-import { Row, Col, Button, Form, Select, Input } from 'antd'
+import { List, Row, Col, Button, Form, Select, Input } from 'antd'
 
 const { Option } = Select
 
@@ -57,15 +57,31 @@ export default class ClientApp extends React.Component {
       <div>
         <WrapClientForm />
         <Row>
-          <Col md={12} style={{paddingRight: 20}}>
+          <Col md={4}>
+            <List
+              size='small'
+              dataSource={[
+                {id: 0, protocol: 'grpc', server_addr: '127.0.0.1:1777'},
+                {id: 1, protocol: 'http', server_addr: '127.0.0.1:8080'},
+                {id: 2, protocol: 'dubbo', server_addr: '127.0.0.1:3001'}
+              ]}
+              bordered={false}
+              renderItem={item => (
+                <List.Item>
+                  # {item.id} {item.protocol} {item.server_addr}
+                </List.Item>
+              )}
+            />
+          </Col>
+          <Col md={10} style={{paddingRight: 20}}>
             <Input.TextArea rows={10} />
           </Col>
-          <Col md={12}>
+          <Col md={10}>
             <Input.TextArea rows={10} />
           </Col>
         </Row>
         <Row>
-          <Col md={24} style={{marginTop: 15}}>
+          <Col md={20} offset={4} style={{marginTop: 15}}>
             <Button type="primary" htmlType="submit">
               Send
             </Button>
