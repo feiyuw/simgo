@@ -2,8 +2,8 @@ import React from 'react'
 import { Layout, Menu } from 'antd'
 import "antd/dist/antd.css"
 import { HashRouter, Switch, Route, Link } from 'react-router-dom'
-import ServerApp from './containers/server'
-import ClientApp from './containers/client'
+import ServerApp from './containers/servers'
+import ClientApp from './containers/clients'
 
 const { Header, Content, Footer } = Layout
 

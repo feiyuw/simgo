@@ -19,10 +19,10 @@ func Start(addr string) {
 	}))
 
 	// routes
-	opsServer.GET("/api/clients", listClients)
-	opsServer.POST("/api/clients", newClient)
-	opsServer.GET("/api/servers", listServers)
-	opsServer.POST("/api/servers", newServer)
+	opsServer.GET("/api/v1/clients", listClients)
+	opsServer.POST("/api/v1/clients", newClient)
+	opsServer.GET("/api/v1/servers", listServers)
+	opsServer.POST("/api/v1/servers", newServer)
 	opsServer.Static("/", "www/build")
 
 	logger.Fatal("ops", opsServer.Start(addr))
