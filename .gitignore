@@ -6,4 +6,5 @@
 /pkg/
 /bin/
 /simgo
+/upload/
 .DS_Store
