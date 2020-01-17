@@ -1,32 +1,19 @@
 import React from 'react'
-import axios from 'axios'
-import {Modal, message} from 'antd'
+import {Modal} from 'antd'
 import GrpcClientForm from './grpcClientForm'
 import HTTPClientForm from './httpClientForm'
 import DubboClientForm from './dubboClientForm'
 
 
 class NewClientDialog extends React.Component {
-  handleSubmit = client => {
-    // new
-    axios.post('/api/v1/clients', {})
-      .then(resp => {
-        message.success(`Client # ${resp.data.id} added!`)
-        this.props.onSubmit(resp.data)
-      })
-      .catch(err => {
-        message.error(`add client error，${err.response.data}`)
-      })
-  }
-
   getClientForm = protocol => {
     switch(protocol) {
       case 'grpc':
-        return <GrpcClientForm />
+        return <GrpcClientForm onSubmit={this.props.onClose}/>
       case 'http':
-        return <HTTPClientForm />
+        return <HTTPClientForm onSubmit={this.props.onClose}/>
       case 'dubbo':
-        return <DubboClientForm />
+        return <DubboClientForm onSubmit={this.props.onClose}/>
       default:
         return <div>Unsupported!</div>
     }

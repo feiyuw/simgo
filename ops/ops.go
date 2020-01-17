@@ -23,6 +23,8 @@ func Start(addr string) {
 	opsServer.POST("/api/v1/clients", newClient)
 	opsServer.GET("/api/v1/servers", listServers)
 	opsServer.POST("/api/v1/servers", newServer)
+	opsServer.POST("/api/v1/files", uploadFile)
+	opsServer.DELETE("/api/v1/files", removeFile)
 	opsServer.Static("/", "www/build")
 
 	logger.Fatal("ops", opsServer.Start(addr))

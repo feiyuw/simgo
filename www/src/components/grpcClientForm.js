@@ -1,4 +1,5 @@
 import React from 'react'
+import axios from 'axios'
 import { Button, Form, Upload, Icon, Input } from 'antd'
 
 
@@ -21,17 +22,31 @@ const TwoColumnsFormItemLayout = {
 }
 
 class GrpcClientForm extends React.Component {
+  protoFiles = []
+
   handleSubmit = e => {
     e.preventDefault()
-    this.props.form.validateFields((err, values) => {
-      if (!err) {
-        console.log('Received values of form: ', values)
+    this.props.form.validateFields(async (err, values) => {
+      if (err!==null && err!==undefined) {
+        return
       }
+      await axios.post('/api/v1/clients', {
+        server: values.server,
+        protos: values.protos.map(file => file.response.filepath),
+      })
+      this.props.onSubmit()
     })
   }
 
-  changeFileSet = ({file, fileList}) => {
-    console.log(file, fileList)
+  removeFile = async (file) => {
+    await axios.delete(`/api/v1/files?filepath=${file.response.filepath}`)
+  }
+
+  normFile = e => {
+    if (Array.isArray(e)) {
+      return e
+    }
+    return e && e.fileList
   }
 
   render() {
@@ -47,9 +62,21 @@ class GrpcClientForm extends React.Component {
             )}
           </Form.Item>
           <Form.Item {...TwoColumnsFormItemLayout} label='Proto Files'>
-            <Upload onChange={this.changeFileSet}>
-              <Button><Icon type='upload' /></Button>
-            </Upload>
+            {getFieldDecorator('protos', {
+              valuePropName: 'fileList',
+              getValueFromEvent: this.normFile,
+              initialValue: [],
+              rules: [{required: true, message: 'Please upload proto files!'}]
+            })(
+              <Upload
+                accept='.proto'
+                action='/api/v1/files'
+                onRemove={this.removeFile}
+                showUploadList={{showRemoveIcon: true, showDownloadIcon: false}}
+              >
+                <Button><Icon type='upload' /></Button>
+              </Upload>
+            )}
           </Form.Item>
           <Form.Item {...FormItemLayoutWithOutLabel}>
             <Button type="primary" htmlType="submit">
