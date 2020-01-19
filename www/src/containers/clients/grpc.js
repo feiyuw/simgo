@@ -1,11 +1,32 @@
 import React from 'react'
-import { Select, Row, Col, Button, Form, Input } from 'antd'
+import axios from 'axios'
+import { message, Select, Row, Col, Button, Form, Input } from 'antd'
 
 
 const {Option} = Select
 
 
 class GrpcClientComponent extends React.Component {
+  state = {loading: true}
+
+  services = []
+  methods = []
+  currentService = undefined
+  currentMethod = undefined
+
+  componentDidMount() {
+    if (this.props.current !== undefined) {
+      axios.get(`/api/v1/grpc/services?clientId=${this.props.current.id}`)
+        .then(resp => {
+          this.services = resp.data
+          this.setState({loading: false})
+        })
+        .catch(err => {
+          message.error('fetch services error!')
+        })
+    }
+  }
+
   handleSubmit = e => {
     e.preventDefault()
     this.props.form.validateFields((err, values) => {
@@ -15,8 +36,12 @@ class GrpcClientComponent extends React.Component {
     })
   }
 
-  handleServiceSwitch = e => {
-    console.log(e)
+  handleServiceSwitch = async e => {
+    this.currentService = e
+    if (this.props.current !== undefined && this.currentService !== undefined) {
+      this.methods = await axios.get(`/api/v1/grpc/methods?clientId=${this.props.current.id}&service=${this.currentService}`).data
+    }
+    console.log(this.methods)
   }
 
   handleMethodSwitch = e => {
@@ -31,12 +56,15 @@ class GrpcClientComponent extends React.Component {
             <Col md={12} style={{paddingRight: 20}}>
               <Form.Item>
                 {getFieldDecorator('service', {
-                  initialValue: undefined,
+                  initialValue: this.services[0],
                   rules: [{ required: true, message: 'Please select service!' }],
                 })(
                   <Select placeholder='grpc service' onChange={this.handleServiceSwitch}>
-                    <Option value='helloworld'>helloworld</Option>
-                    <Option value='echo'>echo</Option>
+                    {
+                      this.services.map((svc, idx) => (
+                        <Option key={idx} value={svc}>{svc}</Option>
+                      ))
+                    }
                   </Select>
                 )}
               </Form.Item>

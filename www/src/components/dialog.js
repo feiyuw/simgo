@@ -9,11 +9,11 @@ class NewClientDialog extends React.Component {
   getClientForm = protocol => {
     switch(protocol) {
       case 'grpc':
-        return <GrpcClientForm onSubmit={this.props.onClose}/>
+        return <GrpcClientForm onSubmit={this.props.onSubmit}/>
       case 'http':
-        return <HTTPClientForm onSubmit={this.props.onClose}/>
+        return <HTTPClientForm onSubmit={this.props.onSubmit}/>
       case 'dubbo':
-        return <DubboClientForm onSubmit={this.props.onClose}/>
+        return <DubboClientForm onSubmit={this.props.onSubmit}/>
       default:
         return <div>Unsupported!</div>
     }

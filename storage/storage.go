@@ -1,9 +1,9 @@
 package storage
 
 type Storage interface {
-	Add(interface{}, interface{}) error
-	Remove(interface{}) error
-	FindOne(interface{}) (interface{}, error)
+	Add(string, interface{}) error
+	Remove(string) error
+	FindOne(string) (interface{}, error)
 	FindAll() ([]interface{}, error)
 }
 

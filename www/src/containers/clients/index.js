@@ -33,7 +33,7 @@ export default class ClientApp extends React.Component {
   getClientComponent = (protocol) => {
     switch(protocol) {
       case 'grpc':
-        return <GrpcClientComponent />
+        return <GrpcClientComponent current={this.state.current} />
       case 'http':
         return <div>http client</div>
       case 'dubbo':

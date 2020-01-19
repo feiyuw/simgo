@@ -21,6 +21,8 @@ func Start(addr string) {
 	// routes
 	opsServer.GET("/api/v1/clients", listClients)
 	opsServer.POST("/api/v1/clients", newClient)
+	opsServer.GET("/api/v1/grpc/services", listGrpcServices)
+	opsServer.GET("/api/v1/grpc/methods", listGrpcMethods)
 	opsServer.GET("/api/v1/servers", listServers)
 	opsServer.POST("/api/v1/servers", newServer)
 	opsServer.POST("/api/v1/files", uploadFile)

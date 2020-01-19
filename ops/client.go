@@ -1,11 +1,13 @@
 package ops
 
 import (
+	"errors"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"simgo/logger"
 	"simgo/protocols"
 	"simgo/storage"
+	"strconv"
 	"sync/atomic"
 )
 
@@ -51,6 +53,26 @@ func newClient(c echo.Context) error {
 	}
 	client.RpcClient = rpcClient
 	client.Id = atomic.AddUint64(&nextClientID, 1)
-	clientStorage.Add(client.Id, client)
+	clientStorage.Add(strconv.FormatUint(client.Id, 10), client)
 	return c.JSON(http.StatusOK, nil)
+}
+
+func listGrpcServices(c echo.Context) error {
+	clientId := c.QueryParam("clientId")
+	client, err := clientStorage.FindOne(clientId)
+	if err != nil {
+		return err
+	}
+	if client.(*Client).Protocol != "grpc" {
+		return errors.New("invalid protocol")
+	}
+	services, err := client.(*Client).RpcClient.(*protocols.GrpcClient).ListServices()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, services)
+}
+
+func listGrpcMethods(c echo.Context) error {
+	return nil
 }
