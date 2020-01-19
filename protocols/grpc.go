@@ -41,7 +41,6 @@ func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) (*Grpc
 	}
 
 	conn, err := grpc.Dial(addr, opts...)
-	fmt.Println(err)
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	}
@@ -76,6 +75,13 @@ func (gc *GrpcClient) ListMethods(svcName string) ([]string, error) {
 		return nil, err
 	}
 	return mtds, nil
+}
+
+func (gc *GrpcClient) Close() error {
+	if gc.conn == nil {
+		return nil
+	}
+	return gc.conn.Close()
 }
 
 type rpcResponse struct {

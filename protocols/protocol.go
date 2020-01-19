@@ -8,6 +8,7 @@ import (
 
 type RpcClient interface {
 	InvokeRPC(string, interface{}) (interface{}, error)
+	Close() error
 }
 
 func NewRpcClient(protocol string, server string, options map[string]interface{}) (RpcClient, error) {

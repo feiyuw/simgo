@@ -1,5 +1,5 @@
 import React from 'react'
-import { message, Input, Select, Icon, Button, List, Row, Col } from 'antd'
+import { Popconfirm, message, Input, Select, Icon, Button, List, Row, Col } from 'antd'
 import axios from 'axios'
 import {NewClientDialog} from '../../components/dialog'
 import GrpcClientComponent from './grpc'
@@ -47,6 +47,16 @@ export default class ClientApp extends React.Component {
     this.setState({showNewDialog: true})
   }
 
+  deleteClient = async (clientId) => {
+    try {
+      await axios.delete(`/api/v1/clients?id=${clientId}`)
+      await this.fetchClients()
+      this.setState({current: this.clients[this.clients.length - 1], loading: false})
+    } catch (err) {
+      return message.error(err.message.data)
+    }
+  }
+
   render() {
     const {current, loading, showNewDialog} = this.state
 
@@ -71,13 +81,26 @@ export default class ClientApp extends React.Component {
               loading={loading}
               renderItem={item => (
                 <List.Item>
-                  <Button
-                    type='link'
-                    style={(current!==undefined && current.id===item.id) ? {backgroundColor: '#1890FF', color: 'white'}: {}}
-                    onClick={() => this.setState({current: item})}
-                  >
-                      # {item.id} {item.protocol} {item.server}
-                  </Button>
+                  <Input.Group compact>
+                    <Button
+                      type='link'
+                      style={(current!==undefined && current.id===item.id) ? {backgroundColor: '#1890FF', color: 'white', maxWidth: '80%'}: {}}
+                      onClick={() => this.setState({current: item})}
+                    >
+                        # {item.id} {item.protocol} {item.server}
+                    </Button>
+                    <Popconfirm
+                      title='close this client?'
+                      onConfirm={() => this.deleteClient(item.id)}
+                    >
+                      <Button
+                        type='link'
+                        style={{color: 'red', float: 'right'}}
+                      >
+                        <Icon type='delete'/>
+                      </Button>
+                    </Popconfirm>
+                  </Input.Group>
                 </List.Item>
               )}
             />

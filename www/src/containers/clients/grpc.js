@@ -72,7 +72,7 @@ class GrpcClientComponent extends React.Component {
           data: values.data
         })
       } catch(err) {
-        return message.error('invoke RPC error!')
+        return message.error(err.response.data)
       }
 
       this.response = resp.data

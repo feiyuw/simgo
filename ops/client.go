@@ -63,6 +63,22 @@ func newClient(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
+func deleteClient(c echo.Context) error {
+	clientId := c.QueryParam("id")
+	client, err := clientStorage.FindOne(clientId)
+	if err != nil {
+		return err
+	}
+	if err := client.(*Client).RpcClient.Close(); err != nil {
+		return err
+	}
+	if err := clientStorage.Remove(clientId); err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, nil)
+}
+
 type rpcRequest struct {
 	ClientID string `json:"clientId"`
 	Method   string `json:"method"`
@@ -77,12 +93,12 @@ func invokeClientRPC(c echo.Context) error {
 
 	client, err := clientStorage.FindOne(req.ClientID)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusNotFound, "client not found!")
 	}
 
 	resp, err := client.(*Client).RpcClient.InvokeRPC(req.Method, req.Data)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, resp)

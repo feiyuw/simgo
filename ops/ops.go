@@ -21,6 +21,7 @@ func Start(addr string) {
 	// routes
 	opsServer.GET("/api/v1/clients", listClients)
 	opsServer.POST("/api/v1/clients", newClient)
+	opsServer.DELETE("/api/v1/clients", deleteClient)
 	opsServer.POST("/api/v1/clients/invoke", invokeClientRPC)
 	opsServer.GET("/api/v1/servers", listServers)
 	opsServer.POST("/api/v1/servers", newServer)
