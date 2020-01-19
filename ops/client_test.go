@@ -14,6 +14,17 @@ import (
 	"testing"
 )
 
+type mockClient struct {
+}
+
+func (mc *mockClient) InvokeRPC(mtd string, data interface{}) (interface{}, error) {
+	return nil, nil
+}
+
+func (mc *mockClient) Close() error {
+	return nil
+}
+
 func TestClientRESTAPIs(t *testing.T) {
 	e := echo.New()
 
@@ -90,5 +101,21 @@ func TestClientRESTAPIs(t *testing.T) {
 			}
 		}
 		So(len(idMap), ShouldEqual, cnt)
+	})
+
+	Convey("remove one client", t, func() {
+		clientStorage.Add("4", &Client{
+			Id:        "4",
+			Protocol:  "dubbo",
+			Server:    "127.0.0.1:1237",
+			RpcClient: &mockClient{},
+		})
+		defer clientStorage.Remove("4")
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/clients?id=4", strings.NewReader(""))
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+		deleteClient(c)
+		So(rec.Code, ShouldEqual, http.StatusOK)
+		So(rec.Body.String(), ShouldEqual, "null\n")
 	})
 }
