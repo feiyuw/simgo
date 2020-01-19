@@ -21,5 +21,12 @@ func TestMemoryStorage(t *testing.T) {
 		item, err = storage.FindOne("k1")
 		So(err, ShouldNotBeNil)
 		So(item, ShouldBeNil)
+		storage.Add("k3", "v3")
+		items, err := storage.FindAll()
+		So(err, ShouldBeNil)
+		So(items, ShouldResemble, []interface{}{
+			"v3",
+			map[string]string{"k21": "v21", "k22": "v22"},
+		})
 	})
 }

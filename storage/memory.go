@@ -28,6 +28,17 @@ func (ms *MemoryStorage) Remove(key string) error {
 	return nil
 }
 
+func (ms *MemoryStorage) FindAll() ([]interface{}, error) {
+	items := make([]interface{}, len(ms.M))
+	idx := 0
+	for _, v := range ms.M {
+		items[idx] = v
+		idx++
+	}
+
+	return items, nil
+}
+
 func (ms *MemoryStorage) FindOne(key string) (interface{}, error) {
 	if v, exists := ms.M[key]; exists {
 		return v, nil

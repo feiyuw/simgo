@@ -4,6 +4,7 @@ type Storage interface {
 	Add(string, interface{}) error
 	Remove(string) error
 	FindOne(string) (interface{}, error)
+	FindAll() ([]interface{}, error)
 }
 
 func NewStorage(storageType string) (Storage, error) {
