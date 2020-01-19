@@ -1,6 +1,6 @@
 import React from 'react'
 import axios from 'axios'
-import { Button, Form, Upload, Icon, Input } from 'antd'
+import { message, Button, Form, Upload, Icon, Input } from 'antd'
 
 
 const FormItemLayoutWithOutLabel = {
@@ -30,10 +30,17 @@ class GrpcClientForm extends React.Component {
       if (err!==null && err!==undefined) {
         return
       }
-      await axios.post('/api/v1/clients', {
-        server: values.server,
-        protos: values.protos.map(file => file.response.filepath),
-      })
+      try{
+        await axios.post('/api/v1/clients', {
+          server: values.server,
+          protocol: 'grpc',
+          options: {
+            protos: values.protos.map(file => file.response.filepath),
+          },
+        })
+      } catch (err) {
+        return message.error('failed to connect to client')
+      }
       this.props.onSubmit()
     })
   }

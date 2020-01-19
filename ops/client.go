@@ -4,8 +4,8 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"simgo/logger"
+	"simgo/protocols"
 	"simgo/storage"
-	"strconv"
 	"sync/atomic"
 )
 
@@ -23,23 +23,20 @@ func init() {
 }
 
 type Client struct {
-	Id       int                    `json:"id"`
-	Protocol string                 `json:"protocol"`
-	Server   string                 `json:"server"`
-	Options  map[string]interface{} `json:"options"`
+	Id        uint64                 `json:"id"`
+	Protocol  string                 `json:"protocol"`
+	Server    string                 `json:"server"`
+	Options   map[string]interface{} `json:"options"`
+	RpcClient protocols.RpcClient
 }
 
 func listClients(c echo.Context) error {
-	clientStorage.Add("0", &Client{Id: 0, Protocol: "grpc", Server: "127.0.0.1:1777", Options: map[string]interface{}{"protos": []string{"hello.proto", "echo.proto"}}})
-	clientStorage.Add("1", &Client{Id: 1, Protocol: "http", Server: "127.0.0.1:8080"})
-	clientStorage.Add("2", &Client{Id: 2, Protocol: "dubbo", Server: "127.0.0.1:3001"})
-
-	allClients, err := clientStorage.FindAll()
+	clients, err := clientStorage.FindAll()
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, allClients)
+	return c.JSON(http.StatusOK, clients)
 }
 
 func newClient(c echo.Context) error {
@@ -47,6 +44,13 @@ func newClient(c echo.Context) error {
 	if err := c.Bind(client); err != nil {
 		return err
 	}
-	clientStorage.Add(strconv.FormatUint(atomic.AddUint64(&nextClientID, 1), 10), client)
+
+	rpcClient, err := protocols.NewRpcClient(client.Protocol, client.Server, client.Options)
+	if err != nil {
+		return err
+	}
+	client.RpcClient = rpcClient
+	client.Id = atomic.AddUint64(&nextClientID, 1)
+	clientStorage.Add(client.Id, client)
 	return c.JSON(http.StatusOK, nil)
 }

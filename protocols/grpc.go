@@ -41,6 +41,7 @@ func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) (*Grpc
 	}
 
 	conn, err := grpc.Dial(addr, opts...)
+	fmt.Println(err)
 	if err != nil {
 		return nil, fmt.Errorf("did not connect: %v", err)
 	}

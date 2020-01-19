@@ -10,17 +10,20 @@ export default class ClientApp extends React.Component {
   clients = []
   protocol = 'grpc' // default new client protocol
 
-  componentDidMount() {
-    axios.get('/api/v1/clients')
-      .then(resp => {
-        this.clients = resp.data
-        if (this.clients && this.clients.length > 0) {
-          this.setState({current: this.clients[0], loading: false})
-        }
-      })
-      .catch(err => {
-        message.error(err)
-      })
+  async componentDidMount() {
+    await this.fetchClients()
+    this.setState({current: this.clients[this.clients.length - 1], loading: false})
+  }
+
+  fetchClients = async () => {
+    let resp
+    try {
+      resp = await axios.get('/api/v1/clients')
+    } catch(err) {
+      return message.error(err)
+    }
+
+    this.clients = resp.data
   }
 
   switchProtocol = (protocol) => {
@@ -93,7 +96,13 @@ export default class ClientApp extends React.Component {
           visible={showNewDialog}
           protocol={this.protocol}
           onClose={() => this.setState({showNewDialog: false})}
-          onSubmit={() => console.log('add new client')}
+          onSubmit={async () => {
+            await this.fetchClients()
+            this.setState({
+              current: this.clients[this.clients.length - 1],
+              loading: false,
+              showNewDialog: false})
+          }}
         />
       </div>
     )
