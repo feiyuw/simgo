@@ -11,52 +11,89 @@ class GrpcClientComponent extends React.Component {
 
   services = []
   methods = []
-  currentService = undefined
-  currentMethod = undefined
 
-  componentDidMount() {
-    if (this.props.current !== undefined) {
-      axios.get(`/api/v1/grpc/services?clientId=${this.props.current.id}`)
-        .then(resp => {
-          this.services = resp.data
-          this.setState({loading: false})
-        })
-        .catch(err => {
-          message.error('fetch services error!')
-        })
+  response = undefined
+
+  async componentDidMount() {
+    await this.fetchServices()
+    await this.fetchMethods()
+    this.setState({loading: false})
+  }
+
+  fetchServices = async () => {
+    let resp
+
+    if (this.props.current === undefined) {
+      return
     }
+
+    try {
+      resp = await axios.get(`/api/v1/grpc/services?clientId=${this.props.current.id}`)
+    } catch (err) {
+      message.error('fetch grpc services error!')
+    }
+
+    this.services = resp.data
+    const { setFieldsValue } = this.props.form
+    setFieldsValue({service: this.services[0]})
+  }
+
+  fetchMethods = async () => {
+    let resp
+
+    const { getFieldValue, setFieldsValue } = this.props.form
+    const svcName = getFieldValue('service')
+    if (this.props.current === undefined || getFieldValue('service') === undefined) {
+      return
+    }
+    try {
+      resp = await axios.get(`/api/v1/grpc/methods?clientId=${this.props.current.id}&service=${svcName}`)
+    } catch (err) {
+      message.error('fetch grpc methods error!')
+    }
+
+    this.methods = resp.data
+    setFieldsValue({method: this.methods[0]})
   }
 
   handleSubmit = e => {
     e.preventDefault()
-    this.props.form.validateFields((err, values) => {
-      if (!err) {
-        console.log('Received values of form: ', values)
+    this.props.form.validateFields(async (err, values) => {
+      if (err !== undefined && err !== null) {
+        return
       }
+
+      let resp
+
+      try{
+        resp = await axios.post('/api/v1/clients/invoke', {
+          clientId: this.props.current.id,
+          method: values.method,
+          data: values.data
+        })
+      } catch(err) {
+        return message.error('invoke RPC error!')
+      }
+
+      this.response = resp.data
+      this.setState({loading: false})
     })
   }
 
-  handleServiceSwitch = async e => {
-    this.currentService = e
-    if (this.props.current !== undefined && this.currentService !== undefined) {
-      this.methods = await axios.get(`/api/v1/grpc/methods?clientId=${this.props.current.id}&service=${this.currentService}`).data
-    }
-    console.log(this.methods)
-  }
-
-  handleMethodSwitch = e => {
-    console.log(e)
+  handleServiceSwitch = async () => {
+    await this.fetchMethods()
+    this.setState({loading: false})
   }
 
   render() {
-    const { getFieldDecorator } = this.props.form
+    const { getFieldDecorator, getFieldValue } = this.props.form
 
     return <Form onSubmit={this.handleSubmit}>
           <Row>
             <Col md={12} style={{paddingRight: 20}}>
               <Form.Item>
                 {getFieldDecorator('service', {
-                  initialValue: this.services[0],
+                  initialValue: undefined,
                   rules: [{ required: true, message: 'Please select service!' }],
                 })(
                   <Select placeholder='grpc service' onChange={this.handleServiceSwitch}>
@@ -75,9 +112,12 @@ class GrpcClientComponent extends React.Component {
                   initialValue: undefined,
                   rules: [{ required: true, message: 'Please select method!' }],
                 })(
-                  <Select placeholder='grpc method' onChange={this.handleMethodSwitch}>
-                    <Option value='UnaryEcho'>UnaryEcho</Option>
-                    <Option value='BidiEcho'>BidiEcho</Option>
+                  <Select placeholder='grpc method'>
+                    {
+                      this.methods.map((mtd, idx) => (
+                        <Option key={idx} value={mtd}>{mtd.substr(getFieldValue('service').length + 1)}</Option>
+                      ))
+                    }
                   </Select>
                 )}
               </Form.Item>
@@ -90,17 +130,17 @@ class GrpcClientComponent extends React.Component {
                   initialValue: '',
                   rules: [{ required: true, message: 'Request data should be set!' }],
                 })(
-                  <Input.TextArea rows={20} />
+                  <Input.TextArea rows={20} allowClear placeholder='JSON request data'/>
                 )}
               </Form.Item>
             </Col>
             <Col md={12}>
-              <Input.TextArea rows={20} value='demo response' />
+              <Input.TextArea rows={20} value={this.response && JSON.stringify(this.response)} disabled/>
             </Col>
           </Row>
           <Form.Item>
             <Button type="primary" htmlType="submit">
-              Connect
+              Send
             </Button>
           </Form.Item>
         </Form>

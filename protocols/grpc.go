@@ -117,7 +117,8 @@ func (gc *GrpcClient) InvokeRPC(mtdName string, reqData interface{}) (interface{
 	var in bytes.Buffer
 	var out = rpcResponse{messages: []bytes.Buffer{}}
 
-	if reflect.TypeOf(reqData).Kind() == reflect.Slice { // multi request data
+	switch reflect.TypeOf(reqData).Kind() {
+	case reflect.Slice:
 		for _, data := range reqData.([]map[string]interface{}) {
 			reqBytes, err := json.Marshal(data)
 			if err != nil {
@@ -125,12 +126,14 @@ func (gc *GrpcClient) InvokeRPC(mtdName string, reqData interface{}) (interface{
 			}
 			in.Write(reqBytes)
 		}
-	} else {
+	case reflect.Map:
 		reqBytes, err := json.Marshal(reqData)
 		if err != nil {
 			return nil, err
 		}
 		in.Write(reqBytes)
+	default:
+		in.WriteString(reqData.(string))
 	}
 
 	rf, formatter, err := grpcurl.RequestParserAndFormatterFor(grpcurl.FormatJSON, gc.desc, true, false, &in)
