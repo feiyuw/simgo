@@ -3,6 +3,9 @@ import {Modal} from 'antd'
 import GrpcClientForm from './grpcClientForm'
 import HTTPClientForm from './httpClientForm'
 import DubboClientForm from './dubboClientForm'
+import GrpcServerForm from './grpcServerForm'
+import HTTPServerForm from './httpServerForm'
+import DubboServerForm from './dubboServerForm'
 
 
 class NewClientDialog extends React.Component {
@@ -36,4 +39,36 @@ class NewClientDialog extends React.Component {
   }
 }
 
-export { NewClientDialog }
+
+class NewServerDialog extends React.Component {
+  getServerForm = protocol => {
+    switch(protocol) {
+      case 'grpc':
+        return <GrpcServerForm onSubmit={this.props.onSubmit}/>
+      case 'http':
+        return <HTTPServerForm onSubmit={this.props.onSubmit}/>
+      case 'dubbo':
+        return <DubboServerForm onSubmit={this.props.onSubmit}/>
+      default:
+        return <div>Unsupported!</div>
+    }
+  }
+
+  render() {
+    return (
+      <Modal
+        title={`New ${this.props.protocol} client`}
+        visible={this.props.visible}
+        onCancel={this.props.onClose}
+        footer={null}
+        width='50%'
+        destroyOnClose={true}
+        confirmLoading={true}
+      >
+        {this.getServerForm(this.props.protocol)}
+      </Modal>
+    )
+  }
+}
+
+export { NewClientDialog, NewServerDialog }

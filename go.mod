@@ -3,6 +3,7 @@ module simgo
 go 1.13
 
 require (
+	bou.ke/monkey v1.0.2
 	github.com/fullstorydev/grpcurl v1.4.0
 	github.com/golang/protobuf v1.3.2
 	github.com/jhump/protoreflect v1.5.0

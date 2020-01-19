@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"simgo/logger"
 	"sync"
 )
 
@@ -16,13 +15,15 @@ type MemoryStorage struct {
 }
 
 func (ms *MemoryStorage) Add(key string, value interface{}) error {
+	ms.Lock()
+	defer ms.Unlock()
 	ms.M[key] = value
 	return nil
 }
 
 func (ms *MemoryStorage) Remove(key string) error {
-	ms.RLock()
-	defer ms.RUnlock()
+	ms.Lock()
+	defer ms.Unlock()
 	if _, exists := ms.M[key]; exists {
 		delete(ms.M, key)
 	}
@@ -30,6 +31,8 @@ func (ms *MemoryStorage) Remove(key string) error {
 }
 
 func (ms *MemoryStorage) FindAll() ([]interface{}, error) {
+	ms.RLock()
+	defer ms.RUnlock()
 	items := make([]interface{}, len(ms.M))
 	idx := 0
 	for _, v := range ms.M {
@@ -41,7 +44,8 @@ func (ms *MemoryStorage) FindAll() ([]interface{}, error) {
 }
 
 func (ms *MemoryStorage) FindOne(key string) (interface{}, error) {
-	logger.Info("storage/memory", ms.M, key)
+	ms.RLock()
+	defer ms.RUnlock()
 	if v, exists := ms.M[key]; exists {
 		return v, nil
 	}
