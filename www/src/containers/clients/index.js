@@ -84,7 +84,7 @@ export default class ClientApp extends React.Component {
                   <Input.Group compact>
                     <Button
                       type='link'
-                      style={(current!==undefined && current.id===item.id) ? {backgroundColor: '#1890FF', color: 'white', maxWidth: '80%'}: {}}
+                      style={(current!==undefined && current.id===item.id) ? {backgroundColor: '#1890FF', color: 'white', maxWidth: '78%'}: {}}
                       onClick={() => this.setState({current: item})}
                     >
                         # {item.id} {item.protocol} {item.server}

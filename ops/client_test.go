@@ -48,7 +48,7 @@ func TestClientRESTAPIs(t *testing.T) {
 		defer clientStorage.Remove("1")
 		defer clientStorage.Remove("2")
 		defer clientStorage.Remove("3")
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/clients", strings.NewReader(""))
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/clients", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		listClients(c)
@@ -111,7 +111,7 @@ func TestClientRESTAPIs(t *testing.T) {
 			RpcClient: &mockClient{},
 		})
 		defer clientStorage.Remove("4")
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/clients?id=4", strings.NewReader(""))
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/clients?id=4", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		deleteClient(c)
