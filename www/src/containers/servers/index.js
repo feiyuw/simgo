@@ -3,12 +3,13 @@ import { Popconfirm, message, Input, Select, Icon, Button, List, Row, Col } from
 import axios from 'axios'
 import {NewServerDialog} from '../../components/dialog'
 import GrpcServerComponent from './grpc'
+import { PROTOCOLS, GRPC, HTTP, DUBBO } from '../../constants'
 
 
 export default class ServerApp extends React.Component {
   state = {current: undefined, loading: true, showNewDialog: false}
   servers = []
-  protocol = 'grpc' // default new server protocol
+  protocol = GRPC // default new server protocol
 
   async componentDidMount() {
     await this.fetchServers()
@@ -32,11 +33,11 @@ export default class ServerApp extends React.Component {
 
   getServerComponent = (protocol) => {
     switch(protocol) {
-      case 'grpc':
+      case GRPC:
         return <GrpcServerComponent current={this.state.current} />
-      case 'http':
+      case HTTP:
         return <div>http server</div>
-      case 'dubbo':
+      case DUBBO:
         return <div>dubbo server</div>
       default:
         return <Icon type='loading' />
@@ -66,9 +67,11 @@ export default class ServerApp extends React.Component {
           <Col md={4}>
             <Input.Group compact>
               <Select defaultValue={this.protocol} style={{width: '60%'}} onChange={this.switchProtocol}>
-                <Select.Option value='grpc'>gRPC</Select.Option>
-                <Select.Option value='http'>HTTP</Select.Option>
-                <Select.Option value='dubbo'>Dubbo</Select.Option>
+                {
+                  PROTOCOLS.map(p => (
+                    <Select.Option key={p.value} value={p.value}>{p.name}</Select.Option>
+                  ))
+                }
               </Select>
               <Button style={{width: '40%'}} onClick={this.addServer}>
                 <Icon type='plus'/> New

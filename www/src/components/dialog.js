@@ -57,7 +57,7 @@ class NewServerDialog extends React.Component {
   render() {
     return (
       <Modal
-        title={`New ${this.props.protocol} client`}
+        title={`New ${this.props.protocol} server`}
         visible={this.props.visible}
         onCancel={this.props.onClose}
         footer={null}

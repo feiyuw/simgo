@@ -27,3 +27,12 @@ func NewRpcClient(protocol string, server string, options map[string]interface{}
 		return nil, errors.New("unsupported protocol: " + protocol)
 	}
 }
+
+type RpcServer interface {
+	Start() error
+	Close() error
+}
+
+func NewRpcServer(protocol string, name string, port int, options map[string]interface{}) (RpcServer, error) {
+	return nil, nil
+}

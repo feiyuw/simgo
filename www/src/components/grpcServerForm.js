@@ -1,6 +1,7 @@
 import React from 'react'
 import axios from 'axios'
-import { message, Button, Form, Upload, Icon, Input } from 'antd'
+import { message, Button, Form, Upload, Icon, Input, InputNumber } from 'antd'
+import {GRPC} from '../constants'
 
 
 const FormItemLayoutWithOutLabel = {
@@ -31,15 +32,13 @@ class GrpcServerForm extends React.Component {
         return
       }
       try{
-        await axios.post('/api/v1/clients', {
-          server: values.server,
-          protocol: 'grpc',
-          options: {
-            protos: values.protos.map(file => file.response.filepath),
-          },
+        await axios.post('/api/v1/servers', {
+          name: values.name,
+          port: values.port,
+          protocol: GRPC,
         })
       } catch (err) {
-        return message.error('failed to connect to client')
+        return message.error('failed to add new server')
       }
       this.props.onSubmit()
     })
@@ -60,12 +59,20 @@ class GrpcServerForm extends React.Component {
     const { getFieldDecorator } = this.props.form
 
     return <Form onSubmit={this.handleSubmit}>
-          <Form.Item {...TwoColumnsFormItemLayout} label='Server Address'>
-            {getFieldDecorator('server', {
+          <Form.Item {...TwoColumnsFormItemLayout} label='Name'>
+            {getFieldDecorator('name', {
               initialValue: '',
-              rules: [{ required: true, message: 'Please input server addr!' }],
+              rules: [{ required: true, message: 'Please input server name!' }],
             })(
-              <Input style={{width: 350}} placeholder='type server addr here' />
+              <Input style={{width: 350}} placeholder='type server name here' />
+            )}
+          </Form.Item>
+          <Form.Item {...TwoColumnsFormItemLayout} label='Port'>
+            {getFieldDecorator('port', {
+              initialValue: 12345,
+              rules: [{ required: true, message: 'Please input simulated server port!' }],
+            })(
+              <InputNumber style={{width: 350}} placeholder='type server port here' />
             )}
           </Form.Item>
           <Form.Item {...TwoColumnsFormItemLayout} label='Proto Files'>
@@ -87,7 +94,7 @@ class GrpcServerForm extends React.Component {
           </Form.Item>
           <Form.Item {...FormItemLayoutWithOutLabel}>
             <Button type="primary" htmlType="submit">
-              Connect
+              Start
             </Button>
           </Form.Item>
         </Form>

@@ -9,78 +9,10 @@ const {Option} = Select
 class GrpcServerComponent extends React.Component {
   state = {loading: true}
 
-  services = []
-  methods = []
-
   response = undefined
 
   async componentDidMount() {
     await this.fetchServices()
-    await this.fetchMethods()
-    this.setState({loading: false})
-  }
-
-  fetchServices = async () => {
-    let resp
-
-    if (this.props.current === undefined) {
-      return
-    }
-
-    try {
-      resp = await axios.get(`/api/v1/grpc/services?clientId=${this.props.current.id}`)
-    } catch (err) {
-      message.error('fetch grpc services error!')
-    }
-
-    this.services = resp.data
-    const { setFieldsValue } = this.props.form
-    setFieldsValue({service: this.services[0]})
-  }
-
-  fetchMethods = async () => {
-    let resp
-
-    const { getFieldValue, setFieldsValue } = this.props.form
-    const svcName = getFieldValue('service')
-    if (this.props.current === undefined || getFieldValue('service') === undefined) {
-      return
-    }
-    try {
-      resp = await axios.get(`/api/v1/grpc/methods?clientId=${this.props.current.id}&service=${svcName}`)
-    } catch (err) {
-      message.error('fetch grpc methods error!')
-    }
-
-    this.methods = resp.data
-    setFieldsValue({method: this.methods[0]})
-  }
-
-  handleSubmit = e => {
-    e.preventDefault()
-    this.props.form.validateFields(async (err, values) => {
-      if (err !== undefined && err !== null) {
-        return
-      }
-
-      let resp
-
-      try{
-        resp = await axios.post('/api/v1/clients/invoke', {
-          clientId: this.props.current.id,
-          method: values.method,
-          data: values.data
-        })
-      } catch(err) {
-        return message.error(err.response.data)
-      }
-
-      this.response = resp.data
-      this.setState({loading: false})
-    })
-  }
-
-  handleServiceSwitch = async () => {
     await this.fetchMethods()
     this.setState({loading: false})
   }

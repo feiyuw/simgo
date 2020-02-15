@@ -4,9 +4,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"simgo/logger"
-	"sort"
-	//"simgo/protocols"
+	"simgo/protocols"
 	"simgo/storage"
+	"sort"
 )
 
 var (
@@ -22,9 +22,12 @@ func init() {
 }
 
 type Server struct {
-	Name     string   `json:"name"`
-	Protocol string   `json:"protocol"`
-	Clients  []string `json:"clients"` // TODO: clients identifier
+	Name      string                 `json:"name"`
+	Protocol  string                 `json:"protocol"`
+	Port      int                    `json:"port"`
+	Options   map[string]interface{} `json:"options"`
+	Clients   []string               `json:"clients"` // TODO: clients identifier
+	RpcServer protocols.RpcServer
 }
 
 func listServers(c echo.Context) error {
@@ -42,5 +45,23 @@ func listServers(c echo.Context) error {
 }
 
 func newServer(c echo.Context) error {
+	server := new(Server)
+	if err := c.Bind(server); err != nil {
+		return err
+	}
+	rpcServer, err := protocols.NewRpcServer(server.Protocol, server.Name, server.Port, server.Options)
+	if err != nil {
+		return err
+	}
+	server.RpcServer = rpcServer
+	serverStorage.Add(server.Name, server)
+	return c.JSON(http.StatusOK, nil)
+}
+
+func deleteServer(c echo.Context) error {
+	return c.JSON(http.StatusOK, nil)
+}
+
+func updateServer(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
