@@ -17,6 +17,9 @@ type MemoryStorage struct {
 func (ms *MemoryStorage) Add(key string, value interface{}) error {
 	ms.Lock()
 	defer ms.Unlock()
+	if _, exists := ms.M[key]; exists {
+		return errors.New(key + " exists!")
+	}
 	ms.M[key] = value
 	return nil
 }

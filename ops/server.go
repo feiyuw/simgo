@@ -53,12 +53,31 @@ func newServer(c echo.Context) error {
 	if err != nil {
 		return err
 	}
+
 	server.RpcServer = rpcServer
-	serverStorage.Add(server.Name, server)
+
+	if err = serverStorage.Add(server.Name, server); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+	if err = server.RpcServer.Start(); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
 	return c.JSON(http.StatusOK, nil)
 }
 
 func deleteServer(c echo.Context) error {
+	serverName := c.QueryParam("name")
+	server, err := serverStorage.FindOne(serverName)
+	if err != nil {
+		return err
+	}
+	if err := server.(*Server).RpcServer.Close(); err != nil {
+		return err
+	}
+	if err := serverStorage.Remove(serverName); err != nil {
+		return err
+	}
 	return c.JSON(http.StatusOK, nil)
 }
 

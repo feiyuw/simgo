@@ -108,7 +108,7 @@ func TestGrpcServer(t *testing.T) {
 		return nil
 	})
 	s.Start()
-	defer s.Stop()
+	defer s.Close()
 	time.Sleep(time.Millisecond) // make sure server started
 
 	client, _ := NewGrpcClient("127.0.0.1:4999", []string{"echo.proto", "helloworld.proto"}, grpc.WithInsecure())

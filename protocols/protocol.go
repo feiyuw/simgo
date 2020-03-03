@@ -3,6 +3,7 @@ package protocols
 import (
 	"errors"
 	"google.golang.org/grpc"
+	"strconv"
 	"time"
 )
 
@@ -34,5 +35,18 @@ type RpcServer interface {
 }
 
 func NewRpcServer(protocol string, name string, port int, options map[string]interface{}) (RpcServer, error) {
-	return nil, nil
+	switch protocol {
+	case "grpc":
+		protos, exists := options["protos"]
+		if !exists {
+			return nil, errors.New("no protos specified")
+		}
+		protosStr := make([]string, len(protos.([]interface{})))
+		for idx, proto := range protos.([]interface{}) {
+			protosStr[idx] = proto.(string)
+		}
+		return NewGrpcServer(":"+strconv.Itoa(port), protosStr)
+	default:
+		return nil, errors.New("unsupported protocol: " + protocol)
+	}
 }

@@ -237,7 +237,7 @@ func (gs *GrpcServer) Start() error {
 	return nil
 }
 
-func (gs *GrpcServer) Stop() error {
+func (gs *GrpcServer) Close() error {
 	if gs.server != nil {
 		gs.server.Stop()
 		gs.server = nil
