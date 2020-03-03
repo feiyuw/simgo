@@ -90,7 +90,7 @@ export default class ServerApp extends React.Component {
                       style={(current!==undefined && current.id===item.id) ? {backgroundColor: '#1890FF', color: 'white', maxWidth: '80%'}: {}}
                       onClick={() => this.setState({current: item})}
                     >
-                        # {item.id} {item.protocol} {item.addr}
+                        {item.name} ({item.protocol}:{item.port})
                     </Button>
                     <Popconfirm
                       title='close this client?'

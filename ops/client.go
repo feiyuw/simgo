@@ -41,7 +41,12 @@ func listClients(c echo.Context) error {
 
 	// sort clients with ID order
 	sort.Slice(clients, func(idx1, idx2 int) bool {
-		return clients[idx1].(*Client).Id < clients[idx2].(*Client).Id
+		intIdx1, err1 := strconv.Atoi(clients[idx1].(*Client).Id)
+		intIdx2, err2 := strconv.Atoi(clients[idx2].(*Client).Id)
+		if err1 != nil || err2 != nil {
+			return clients[idx1].(*Client).Id < clients[idx2].(*Client).Id
+		}
+		return intIdx1 < intIdx2
 	})
 
 	return c.JSON(http.StatusOK, clients)
