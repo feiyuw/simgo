@@ -1,0 +1,6 @@
+.server-msg-item {
+  width: 100%;
+}
+.server-msg-item[direction="out"] {
+  text-align: right;
+}

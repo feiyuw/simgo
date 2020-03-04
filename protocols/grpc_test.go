@@ -245,6 +245,35 @@ func TestGrpcServer(t *testing.T) {
 		So(outSlice[1]["message"], ShouldEqual, "b")
 		So(outSlice[2]["message"], ShouldEqual, "c")
 	})
+
+	Convey("handle listeners", t, func() {
+		msgCnt := 0
+		inMsgs := [][]string{}
+		outMsgs := [][]string{}
+		s.AddListener(func(mtd, direction, from, to, body string) error {
+			msgCnt++
+			return nil
+		})
+		s.AddListener(func(mtd, direction, from, to, body string) error {
+			switch direction {
+			case "in":
+				inMsgs = append(inMsgs, []string{mtd, from, to, body})
+			case "out":
+				outMsgs = append(outMsgs, []string{mtd, from, to, body})
+			}
+
+			return nil
+		})
+
+		client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "what to do"})
+		So(msgCnt, ShouldEqual, 2)
+		So(len(inMsgs), ShouldEqual, 1)
+		So(inMsgs[0][0], ShouldEqual, "helloworld.Greeter.SayHello")
+		So(inMsgs[0][2], ShouldEqual, ":4999")
+		So(len(outMsgs), ShouldEqual, 1)
+		So(outMsgs[0][0], ShouldEqual, "helloworld.Greeter.SayHello")
+		So(outMsgs[0][1], ShouldEqual, ":4999")
+	})
 }
 
 // hwServer is used to implement helloworld.GreeterServer.

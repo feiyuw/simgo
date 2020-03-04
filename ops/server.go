@@ -21,6 +21,14 @@ func init() {
 	}
 }
 
+type Message struct {
+	Method string `json:"method"`
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Ts     int    `json:"ts"`
+	Body   string `json:"body"`
+}
+
 type Server struct {
 	Name      string                 `json:"name"`
 	Protocol  string                 `json:"protocol"`
@@ -28,6 +36,7 @@ type Server struct {
 	Options   map[string]interface{} `json:"options"`
 	Clients   []string               `json:"clients"` // TODO: clients identifier
 	RpcServer protocols.RpcServer
+	Messages  []*Message
 }
 
 func listServers(c echo.Context) error {
@@ -81,6 +90,18 @@ func deleteServer(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-func updateServer(c echo.Context) error {
-	return c.JSON(http.StatusOK, nil)
+func fetchMessages(c echo.Context) error {
+	serverName := c.QueryParam("name")
+	//limit := c.QueryParam("limit")
+	//skip := c.QueryParam("skip")
+	server, err := serverStorage.FindOne(serverName)
+	if err != nil {
+		return err
+	}
+	messages := server.(*Server).Messages
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, messages)
 }

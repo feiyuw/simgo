@@ -1,6 +1,7 @@
 import React from 'react'
 import axios from 'axios'
 import { message, Button, Form, Upload, Icon, Input } from 'antd'
+import {GRPC} from '../constants'
 
 
 const FormItemLayoutWithOutLabel = {
@@ -33,7 +34,7 @@ class GrpcClientForm extends React.Component {
       try{
         await axios.post('/api/v1/clients', {
           server: values.server,
-          protocol: 'grpc',
+          protocol: GRPC,
           options: {
             protos: values.protos.map(file => file.response.filepath),
           },

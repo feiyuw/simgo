@@ -15,6 +15,7 @@ import (
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/jhump/protoreflect/grpcreflect"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/peer"
 	rpb "google.golang.org/grpc/reflection/grpc_reflection_v1alpha"
 )
 
@@ -157,10 +158,11 @@ func (gc *GrpcClient) InvokeRPC(mtdName string, reqData interface{}) (interface{
 // ================================== server ==================================
 
 type GrpcServer struct {
-	addr     string
-	desc     grpcurl.DescriptorSource
-	server   *grpc.Server
-	handlerM map[string]func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error
+	addr      string
+	desc      grpcurl.DescriptorSource
+	server    *grpc.Server
+	handlerM  map[string]func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error
+	listeners []func(mtd, direction, from, to, body string) error
 }
 
 // create a new grpc server
@@ -248,6 +250,11 @@ func (gs *GrpcServer) Close() error {
 	return nil
 }
 
+func (gs *GrpcServer) AddListener(listener func(mtd, direction, from, to, body string) error) {
+	gs.listeners = append(gs.listeners, listener)
+	logger.Infof("protocols/grpc", "new listener added, now %d listeners", len(gs.listeners))
+}
+
 // set specified method handler, one method only have one handler, it's the highest priority
 // if you want to return error, see https://github.com/avinassh/grpc-errors/blob/master/go/server.go
 func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error) error {
@@ -268,7 +275,20 @@ func (gs *GrpcServer) getMethodHandler(mtd string) (func(in *dynamic.Message, ou
 
 func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface{}, context.Context, func(interface{}) error, grpc.UnaryServerInterceptor) (interface{}, error) {
 	return func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-		handler, err := gs.getMethodHandler(mtd.GetFullyQualifiedName())
+		var peerAddr string
+
+		if len(gs.listeners) > 0 {
+			p, ok := peer.FromContext(ctx)
+			if ok {
+				peerAddr = p.Addr.String()
+			} else {
+				logger.Error("protocols/grpc", "failed to get peer address")
+			}
+		}
+
+		mtdFqn := mtd.GetFullyQualifiedName()
+
+		handler, err := gs.getMethodHandler(mtdFqn)
 		if err != nil {
 			return nil, err
 		}
@@ -276,9 +296,20 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 		if err := dec(in); err != nil {
 			return nil, err
 		}
+
+		// handle in message in listener
+		for _, listener := range gs.listeners {
+			listener(mtdFqn, "in", peerAddr, gs.addr, in.String())
+		}
+
 		out := dynamic.NewMessage(mtd.GetOutputType())
 		if err := handler(in, out, nil); err != nil {
 			return nil, err
+		}
+
+		// handle out message in listener
+		for _, listener := range gs.listeners {
+			listener(mtdFqn, "out", gs.addr, peerAddr, out.String())
 		}
 
 		if interceptor == nil {

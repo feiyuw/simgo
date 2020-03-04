@@ -32,6 +32,7 @@ func NewRpcClient(protocol string, server string, options map[string]interface{}
 type RpcServer interface {
 	Start() error
 	Close() error
+	AddListener(func(mtd, direction, from, to, body string) error)
 }
 
 func NewRpcServer(protocol string, name string, port int, options map[string]interface{}) (RpcServer, error) {

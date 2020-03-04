@@ -36,6 +36,9 @@ class GrpcServerForm extends React.Component {
           name: values.name,
           port: values.port,
           protocol: GRPC,
+          options: {
+            protos: values.protos.map(file => file.response.filepath),
+          },
         })
       } catch (err) {
         return message.error('failed to add new server')
