@@ -13,7 +13,7 @@ export default class ServerApp extends React.Component {
 
   async componentDidMount() {
     await this.fetchServers()
-    this.setState({current: this.servers[this.servers.length - 1], loading: false})
+    this.setState({current: this.servers[0], loading: false})
   }
 
   fetchServers = async () => {
@@ -52,7 +52,7 @@ export default class ServerApp extends React.Component {
     try {
       await axios.delete(`/api/v1/servers?name=${serverName}`)
       await this.fetchServers()
-      this.setState({current: this.servers[this.servers.length - 1], loading: false})
+      this.setState({current: this.servers[0], loading: false})
     } catch (err) {
       return message.error(err.message.data)
     }
@@ -125,7 +125,7 @@ export default class ServerApp extends React.Component {
           onSubmit={async () => {
             await this.fetchServers()
             this.setState({
-              current: this.servers[this.servers.length - 1],
+              current: this.servers[0],
               loading: false,
               showNewDialog: false})
           }}

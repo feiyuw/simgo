@@ -8,6 +8,7 @@ const {Option} = Select
 
 class GrpcClientComponent extends React.Component {
   state = {loading: true}
+  clientId = this.props.current && this.props.current.id
 
   services = []
   methods = []
@@ -20,15 +21,24 @@ class GrpcClientComponent extends React.Component {
     this.setState({loading: false})
   }
 
+  async componentWillReceiveProps(nextProps) {
+    if (this.props.current !== nextProps.current) {
+      this.clientId = nextProps.current.id
+      await this.fetchServices()
+      await this.fetchMethods()
+      this.setState({loading: false})
+    }
+  }
+
   fetchServices = async () => {
     let resp
 
-    if (this.props.current === undefined) {
+    if (this.clientId === undefined) {
       return
     }
 
     try {
-      resp = await axios.get(`/api/v1/clients/grpc/services?clientId=${this.props.current.id}`)
+      resp = await axios.get(`/api/v1/clients/grpc/services?clientId=${this.clientId}`)
     } catch (err) {
       message.error('fetch grpc services error!')
     }
@@ -43,11 +53,11 @@ class GrpcClientComponent extends React.Component {
 
     const { getFieldValue, setFieldsValue } = this.props.form
     const svcName = getFieldValue('service')
-    if (this.props.current === undefined || getFieldValue('service') === undefined) {
+    if (this.clientId === undefined || getFieldValue('service') === undefined) {
       return
     }
     try {
-      resp = await axios.get(`/api/v1/clients/grpc/methods?clientId=${this.props.current.id}&service=${svcName}`)
+      resp = await axios.get(`/api/v1/clients/grpc/methods?clientId=${this.clientId}&service=${svcName}`)
     } catch (err) {
       message.error('fetch grpc methods error!')
     }
@@ -67,7 +77,7 @@ class GrpcClientComponent extends React.Component {
 
       try{
         resp = await axios.post('/api/v1/clients/invoke', {
-          clientId: this.props.current.id,
+          clientId: this.clientId,
           method: values.method,
           data: values.data
         })
