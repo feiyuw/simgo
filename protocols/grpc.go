@@ -290,6 +290,7 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 
 		handler, err := gs.getMethodHandler(mtdFqn)
 		if err != nil {
+			logger.Errorf("protocols/grpc", "no handler for %s", mtdFqn)
 			return nil, err
 		}
 		in := dynamic.NewMessage(mtd.GetInputType())

@@ -35,7 +35,13 @@ export default class GrpcServerComponent extends React.Component {
   }
 
   loadMessages = async (serverName) => {
-    console.log(serverName)
+    let resp
+    try {
+      resp = await axios.get(`/api/v1/servers/messages?name=${serverName}&skip=0&limit=30`)
+    } catch(err) {
+      return message.error(err)
+    }
+    this.messages = resp.data
     this.setState({loadingMessage: false})
   }
 

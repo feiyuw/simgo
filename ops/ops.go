@@ -19,12 +19,17 @@ func Start(addr string) {
 	}))
 
 	// routes
+	// clients
 	opsServer.GET("/api/v1/clients", listClients)
 	opsServer.POST("/api/v1/clients", newClient)
 	opsServer.DELETE("/api/v1/clients", deleteClient)
 	opsServer.POST("/api/v1/clients/invoke", invokeClientRPC)
+	// servers
 	opsServer.GET("/api/v1/servers", listServers)
 	opsServer.POST("/api/v1/servers", newServer)
+	opsServer.DELETE("/api/v1/servers", deleteServer)
+	opsServer.GET("/api/v1/servers/messages", fetchMessages)
+	// other
 	opsServer.POST("/api/v1/files", uploadFile)
 	opsServer.DELETE("/api/v1/files", removeFile)
 	opsServer.Static("/", "www/build")

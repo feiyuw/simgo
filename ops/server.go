@@ -7,6 +7,12 @@ import (
 	"simgo/protocols"
 	"simgo/storage"
 	"sort"
+	"strconv"
+	"time"
+)
+
+const (
+	MSGSIZE = 1000
 )
 
 var (
@@ -22,11 +28,12 @@ func init() {
 }
 
 type Message struct {
-	Method string `json:"method"`
-	From   string `json:"from"`
-	To     string `json:"to"`
-	Ts     int    `json:"ts"`
-	Body   string `json:"body"`
+	Method    string `json:"method"`
+	Direction string `json:"direction"`
+	From      string `json:"from"`
+	To        string `json:"to"`
+	Ts        int64  `json:"ts"`
+	Body      string `json:"body"`
 }
 
 type Server struct {
@@ -72,6 +79,26 @@ func newServer(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
+	server.Messages = make([]*Message, 0, MSGSIZE) // TODO: handle message save and load in storage
+	server.RpcServer.AddListener(func(mtd, direction, from, to, body string) error {
+		msg := &Message{
+			Method:    mtd,
+			Direction: direction,
+			From:      from,
+			To:        to,
+			Ts:        time.Now().UnixNano() / time.Hour.Milliseconds(),
+			Body:      body,
+		}
+		// TODO: add rlock
+		if len(server.Messages) == MSGSIZE {
+			copy(server.Messages[1:], server.Messages[0:MSGSIZE-1])
+			server.Messages[0] = msg
+		} else {
+			server.Messages = append([]*Message{msg}, server.Messages...)
+		}
+		return nil
+	})
+
 	return c.JSON(http.StatusOK, nil)
 }
 
@@ -91,14 +118,32 @@ func deleteServer(c echo.Context) error {
 }
 
 func fetchMessages(c echo.Context) error {
+	var (
+		limit, skip int
+		err         error
+	)
+
 	serverName := c.QueryParam("name")
-	//limit := c.QueryParam("limit")
-	//skip := c.QueryParam("skip")
+	if qLimit := c.QueryParam("limit"); qLimit != "" {
+		limit, err = strconv.Atoi(qLimit)
+	}
+	if err != nil {
+		limit = 30
+	}
+	if qSkip := c.QueryParam("skip"); qSkip != "" {
+		skip, err = strconv.Atoi(qSkip)
+	}
+	if err != nil {
+		skip = 0
+	}
+
 	server, err := serverStorage.FindOne(serverName)
 	if err != nil {
 		return err
 	}
-	messages := server.(*Server).Messages
+
+	messages := make([]*Message, 0, limit)
+	copy(messages, server.(*Server).Messages[skip:skip+limit])
 	if err != nil {
 		return err
 	}
