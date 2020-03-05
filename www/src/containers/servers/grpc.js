@@ -18,6 +18,7 @@ const MessageItem = ({method, direction, from, to, ts, body}) => (
 
 export default class GrpcServerComponent extends React.Component {
   state = {loadingHandler: true, loadingMessage: true, showHandlerDialog: false}
+  serverName = this.props.current && this.props.current.name
   handlers = []
   messages = []
   skip = 0
@@ -25,6 +26,13 @@ export default class GrpcServerComponent extends React.Component {
 
   async componentDidMount() {
     await this.loadMessages()
+  }
+
+  async componentWillReceiveProps(nextProps) {
+    if (this.props.current !== nextProps.current) {
+      this.serverName = nextProps.current.name
+      await this.loadMessages()
+    }
   }
 
   loadHandlers = async () => {
@@ -45,16 +53,14 @@ export default class GrpcServerComponent extends React.Component {
     this.setState({loadingHandler: false})
   }
 
-  loadMessages = async serverName => {
-    const {current} = this.props
-
-    if (current === undefined) {
+  loadMessages = async () => {
+    if (this.serverName === undefined) {
       return
     }
 
     let resp
     try {
-      resp = await axios.get(`/api/v1/servers/messages?name=${current.name}&skip=${this.skip}&limit=${this.limit}`)
+      resp = await axios.get(`/api/v1/servers/messages?name=${this.serverName}&skip=${this.skip}&limit=${this.limit}`)
     } catch(err) {
       return message.error(err)
     }

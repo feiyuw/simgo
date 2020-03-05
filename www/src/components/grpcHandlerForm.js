@@ -74,7 +74,7 @@ class GrpcHandlerForm extends React.Component {
               </Select>
             )}
           </Form.Item>
-          <Form.Item>
+          <Form.Item {...TwoColumnsFormItemLayout} label='Content'>
             {getFieldDecorator('content', {
               initialValue: '',
               rules: [{ required: true, message: 'content should be set!' }],
