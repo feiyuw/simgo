@@ -1,26 +1,8 @@
 import React from 'react'
 import axios from 'axios'
 import { message, Button, Form, Upload, Icon, Input } from 'antd'
-import {GRPC} from '../constants'
+import {GRPC, FormItemLayoutWithOutLabel, TwoColumnsFormItemLayout} from '../constants'
 
-
-const FormItemLayoutWithOutLabel = {
-  wrapperCol: {
-    xs: { span: 24, offset: 0 },
-    sm: { span: 20, offset: 4 },
-  },
-}
-
-const TwoColumnsFormItemLayout = {
-  labelCol: {
-    xs: { span: 20 },
-    sm: { span: 8 },
-  },
-  wrapperCol: {
-    xs: { span: 20 },
-    sm: { span: 16 },
-  },
-}
 
 class GrpcClientForm extends React.Component {
   protoFiles = []

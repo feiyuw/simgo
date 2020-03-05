@@ -258,11 +258,41 @@ func (gs *GrpcServer) AddListener(listener func(mtd, direction, from, to, body s
 // set specified method handler, one method only have one handler, it's the highest priority
 // if you want to return error, see https://github.com/avinassh/grpc-errors/blob/master/go/server.go
 func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error) error {
+	// TODO: use lock
 	if _, exists := gs.handlerM[mtd]; exists {
 		logger.Warnf("protocols/grpc", "handler for method %s exists, will be overrided", mtd)
 	}
 	gs.handlerM[mtd] = handler
 	return nil
+}
+
+func (gs *GrpcServer) RemoveMethodHandler(mtd string) error {
+	// TODO: use lock
+	if _, exists := gs.handlerM[mtd]; exists {
+		delete(gs.handlerM, mtd)
+	}
+	return nil
+}
+
+func (gs *GrpcServer) ListMethods() ([]string, error) {
+	methods := []string{}
+	services, err := grpcurl.ListServices(gs.desc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list services")
+	}
+	for _, svcName := range services {
+		dsc, err := gs.desc.FindSymbol(svcName)
+		if err != nil {
+			return nil, fmt.Errorf("unable to find service: %s, error: %v", svcName, err)
+		}
+		sd := dsc.(*desc.ServiceDescriptor)
+
+		for _, mtd := range sd.GetMethods() {
+			methods = append(methods, mtd.GetFullyQualifiedName())
+		}
+	}
+
+	return methods, nil
 }
 
 func (gs *GrpcServer) getMethodHandler(mtd string) (func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error, error) {

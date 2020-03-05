@@ -6,6 +6,7 @@ import DubboClientForm from './dubboClientForm'
 import GrpcServerForm from './grpcServerForm'
 import HTTPServerForm from './httpServerForm'
 import DubboServerForm from './dubboServerForm'
+import GrpcHandlerForm from './grpcHandlerForm'
 
 
 class NewClientDialog extends React.Component {
@@ -71,4 +72,26 @@ class NewServerDialog extends React.Component {
   }
 }
 
-export { NewClientDialog, NewServerDialog }
+
+class NewGrpcMethodHandlerDialog extends React.Component {
+  render() {
+    return (
+      <Modal
+        title={`New Grpc Method Handler`}
+        visible={this.props.visible}
+        onCancel={this.props.onClose}
+        footer={null}
+        width='50%'
+        destroyOnClose={true}
+        confirmLoading={true}
+      >
+      <GrpcHandlerForm
+        server={this.props.server}
+        onSubmit={this.props.onSubmit}
+      />
+      </Modal>
+    )
+  }
+}
+
+export { NewClientDialog, NewServerDialog, NewGrpcMethodHandlerDialog }

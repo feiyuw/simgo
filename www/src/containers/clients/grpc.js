@@ -28,7 +28,7 @@ class GrpcClientComponent extends React.Component {
     }
 
     try {
-      resp = await axios.get(`/api/v1/grpc/services?clientId=${this.props.current.id}`)
+      resp = await axios.get(`/api/v1/clients/grpc/services?clientId=${this.props.current.id}`)
     } catch (err) {
       message.error('fetch grpc services error!')
     }
@@ -47,7 +47,7 @@ class GrpcClientComponent extends React.Component {
       return
     }
     try {
-      resp = await axios.get(`/api/v1/grpc/methods?clientId=${this.props.current.id}&service=${svcName}`)
+      resp = await axios.get(`/api/v1/clients/grpc/methods?clientId=${this.props.current.id}&service=${svcName}`)
     } catch (err) {
       message.error('fetch grpc methods error!')
     }

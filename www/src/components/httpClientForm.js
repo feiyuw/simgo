@@ -1,24 +1,7 @@
 import React from 'react'
 import { Button, Form, Input } from 'antd'
+import {FormItemLayoutWithOutLabel, TwoColumnsFormItemLayout} from '../constants'
 
-
-const FormItemLayoutWithOutLabel = {
-  wrapperCol: {
-    xs: { span: 24, offset: 0 },
-    sm: { span: 20, offset: 4 },
-  },
-}
-
-const TwoColumnsFormItemLayout = {
-  labelCol: {
-    xs: { span: 20 },
-    sm: { span: 8 },
-  },
-  wrapperCol: {
-    xs: { span: 20 },
-    sm: { span: 16 },
-  },
-}
 
 class HTTPClientForm extends React.Component {
   handleSubmit = e => {

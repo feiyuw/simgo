@@ -29,13 +29,17 @@ func Start(addr string) {
 	opsServer.POST("/api/v1/servers", newServer)
 	opsServer.DELETE("/api/v1/servers", deleteServer)
 	opsServer.GET("/api/v1/servers/messages", fetchMessages)
+	opsServer.GET("/api/v1/servers/handlers", listMethodHandlers)
+	opsServer.POST("/api/v1/servers/handlers", addMethodHandler)
+	opsServer.DELETE("/api/v1/servers/handlers", deleteMethodHandler)
+	opsServer.GET("/api/v1/servers/grpc/methods", listServerGrpcMethods)
 	// other
 	opsServer.POST("/api/v1/files", uploadFile)
 	opsServer.DELETE("/api/v1/files", removeFile)
 	opsServer.Static("/", "www/build")
 	// grpc specified
-	opsServer.GET("/api/v1/grpc/services", listGrpcServices)
-	opsServer.GET("/api/v1/grpc/methods", listGrpcMethods)
+	opsServer.GET("/api/v1/clients/grpc/services", listGrpcServices)
+	opsServer.GET("/api/v1/clients/grpc/methods", listGrpcMethods)
 
 	logger.Fatal("ops", opsServer.Start(addr))
 }
