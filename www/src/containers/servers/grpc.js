@@ -26,24 +26,25 @@ export default class GrpcServerComponent extends React.Component {
 
   async componentDidMount() {
     await this.loadMessages()
+    await this.loadHandlers()
   }
 
   async componentWillReceiveProps(nextProps) {
     if (this.props.current !== nextProps.current) {
       this.serverName = nextProps.current.name
       await this.loadMessages()
+      await this.loadHandlers()
     }
   }
 
   loadHandlers = async () => {
-    const {current} = this.props
-    if (current === undefined) {
+    if (this.serverName === undefined) {
       return
     }
 
     let resp
     try {
-      resp = await axios.get(`/api/v1/servers/handlers?name=${current.name}`)
+      resp = await axios.get(`/api/v1/servers/handlers?name=${this.serverName}`)
     } catch(err) {
       return message.error(err)
     }
@@ -86,7 +87,7 @@ export default class GrpcServerComponent extends React.Component {
 
     return (
       <div>
-        <Collapse onChange={this.loadHandlers}>
+        <Collapse>
           <Panel header='Method Handlers'>
             <Button size='small' type='primary' onClick={this.onAddHandler}>
               <Icon type='plus'/> New Method Handler

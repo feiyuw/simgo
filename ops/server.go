@@ -93,10 +93,9 @@ func newServer(c echo.Context) error {
 			Direction: direction,
 			From:      from,
 			To:        to,
-			Ts:        time.Now().UnixNano() / time.Hour.Milliseconds(),
+			Ts:        time.Now().UnixNano() / int64(time.Millisecond),
 			Body:      body,
 		}
-		logger.Debug("ops/server", "got message", msg)
 		// TODO: add rlock
 		if len(server.Messages) == MSGSIZE {
 			copy(server.Messages[1:], server.Messages[0:MSGSIZE-1])

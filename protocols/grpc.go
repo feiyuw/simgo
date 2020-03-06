@@ -21,7 +21,7 @@ import (
 
 // ================================== client ==================================
 var (
-	ctx = context.Background() // TODO: add timeout, dialtime options
+	clientCTX = context.Background() // TODO: add timeout, dialtime options
 )
 
 // client
@@ -56,8 +56,8 @@ func NewGrpcClient(addr string, protos []string, opts ...grpc.DialOption) (*Grpc
 
 	// fetch from server reflection RPC
 	c := rpb.NewServerReflectionClient(conn)
-	refClient := grpcreflect.NewClient(ctx, c)
-	descSource = grpcurl.DescriptorSourceFromServer(ctx, refClient)
+	refClient := grpcreflect.NewClient(clientCTX, c)
+	descSource = grpcurl.DescriptorSourceFromServer(clientCTX, refClient)
 
 	return &GrpcClient{addr: addr, conn: conn, desc: descSource}, nil
 }
@@ -148,7 +148,7 @@ func (gc *GrpcClient) InvokeRPC(mtdName string, reqData interface{}) (interface{
 		return nil, err
 	}
 	h := grpcurl.NewDefaultEventHandler(&out, gc.desc, formatter, false)
-	if err = grpcurl.InvokeRPC(ctx, gc.desc, gc.conn, mtdName, []string{}, h, rf.Next); err != nil {
+	if err = grpcurl.InvokeRPC(clientCTX, gc.desc, gc.conn, mtdName, []string{}, h, rf.Next); err != nil {
 		return nil, err
 	}
 
@@ -304,6 +304,8 @@ func (gs *GrpcServer) getMethodHandler(mtd string) (func(in *dynamic.Message, ou
 }
 
 func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface{}, context.Context, func(interface{}) error, grpc.UnaryServerInterceptor) (interface{}, error) {
+	mtdFqn := mtd.GetFullyQualifiedName()
+
 	return func(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 		var peerAddr string
 
@@ -316,8 +318,6 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 			}
 		}
 
-		mtdFqn := mtd.GetFullyQualifiedName()
-
 		handler, err := gs.getMethodHandler(mtdFqn)
 		if err != nil {
 			logger.Errorf("protocols/grpc", "no handler for %s", mtdFqn)
@@ -327,7 +327,6 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 		if err := dec(in); err != nil {
 			return nil, err
 		}
-
 		// handle in message in listener
 		for _, listener := range gs.listeners {
 			listener(mtdFqn, "in", peerAddr, gs.addr, in.String())
@@ -337,7 +336,6 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 		if err := handler(in, out, nil); err != nil {
 			return nil, err
 		}
-
 		// handle out message in listener
 		for _, listener := range gs.listeners {
 			listener(mtdFqn, "out", gs.addr, peerAddr, out.String())
@@ -349,7 +347,7 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 
 		info := &grpc.UnaryServerInfo{
 			Server:     srv,
-			FullMethod: mtd.GetFullyQualifiedName(),
+			FullMethod: mtdFqn,
 		}
 		wrapper := func(ctx context.Context, req interface{}) (interface{}, error) {
 			return out, nil
@@ -359,8 +357,11 @@ func (gs *GrpcServer) getUnaryHandler(mtd *desc.MethodDescriptor) func(interface
 }
 
 func (gs *GrpcServer) getStreamHandler(mtd *desc.MethodDescriptor) func(interface{}, grpc.ServerStream) error {
+	mtdFqn := mtd.GetFullyQualifiedName()
+
 	return func(srv interface{}, stream grpc.ServerStream) error {
-		handler, err := gs.getMethodHandler(mtd.GetFullyQualifiedName())
+		// TODO: listeners for stream messages
+		handler, err := gs.getMethodHandler(mtdFqn)
 		if err != nil {
 			return err
 		}
@@ -369,6 +370,7 @@ func (gs *GrpcServer) getStreamHandler(mtd *desc.MethodDescriptor) func(interfac
 		if err := handler(in, out, stream); err != nil {
 			return err
 		}
+
 		return nil
 	}
 }
