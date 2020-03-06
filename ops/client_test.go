@@ -65,6 +65,7 @@ func TestClientRESTAPIs(t *testing.T) {
 		monkey.Patch(protocols.NewRpcClient, func(protocol string, server string, options map[string]interface{}) (protocols.RpcClient, error) {
 			return &protocols.GrpcClient{}, nil
 		})
+		defer monkey.Unpatch(protocols.NewRpcClient)
 
 		var wg sync.WaitGroup
 		var cnt = 100

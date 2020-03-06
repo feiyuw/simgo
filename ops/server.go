@@ -135,13 +135,13 @@ func fetchMessages(c echo.Context) error {
 	if qLimit := c.QueryParam("limit"); qLimit != "" {
 		limit, err = strconv.Atoi(qLimit)
 	}
-	if err != nil {
+	if err != nil || limit <= 0 {
 		limit = 30
 	}
 	if qSkip := c.QueryParam("skip"); qSkip != "" {
 		skip, err = strconv.Atoi(qSkip)
 	}
-	if err != nil {
+	if err != nil || skip < 0 {
 		skip = 0
 	}
 
