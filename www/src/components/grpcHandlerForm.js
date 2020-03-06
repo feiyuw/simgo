@@ -2,6 +2,7 @@ import React from 'react'
 import axios from 'axios'
 import { message, Select, Button, Form, Input } from 'antd'
 import {FormItemLayoutWithOutLabel, TwoColumnsFormItemLayout} from '../constants'
+import urls from '../urls'
 
 
 const {Option} = Select
@@ -18,7 +19,7 @@ class GrpcHandlerForm extends React.Component {
 
     let resp
     try {
-      resp = await axios.get(`/api/v1/servers/grpc/methods?name=${this.props.server}`)
+      resp = await axios.get(urls.grpcServersMethods, {params: {name: this.props.server}})
     } catch(err) {
       return message.error(err)
     }
@@ -33,7 +34,7 @@ class GrpcHandlerForm extends React.Component {
         return
       }
       try{
-        await axios.post('/api/v1/servers/handlers', {
+        await axios.post(urls.grpcServersHandlers, {
           name: this.props.server,
           method: values.method,
           type: values.type,

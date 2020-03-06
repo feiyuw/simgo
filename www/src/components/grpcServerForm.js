@@ -2,6 +2,7 @@ import React from 'react'
 import axios from 'axios'
 import { message, Button, Form, Upload, Icon, Input, InputNumber } from 'antd'
 import {GRPC, FormItemLayoutWithOutLabel, TwoColumnsFormItemLayout} from '../constants'
+import urls from '../urls'
 
 
 class GrpcServerForm extends React.Component {
@@ -14,7 +15,7 @@ class GrpcServerForm extends React.Component {
         return
       }
       try{
-        await axios.post('/api/v1/servers', {
+        await axios.post(urls.servers, {
           name: values.name,
           port: values.port,
           protocol: GRPC,
@@ -30,7 +31,7 @@ class GrpcServerForm extends React.Component {
   }
 
   removeFile = async (file) => {
-    await axios.delete(`/api/v1/files?filepath=${file.response.filepath}`)
+    await axios.delete(urls.files, {params: {filepath: file.response.filepath}})
   }
 
   normFile = e => {

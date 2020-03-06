@@ -2,6 +2,7 @@ import React from 'react'
 import axios from 'axios'
 import { Popconfirm, Icon, Collapse, Card, List, message, Button } from 'antd'
 import {NewGrpcMethodHandlerDialog} from '../../components/dialog'
+import urls from '../../urls'
 import './grpc.css'
 
 
@@ -40,9 +41,9 @@ export default class GrpcServerComponent extends React.Component {
     }
   }
 
-  async componentWillReceiveProps(nextProps) {
-    if (this.props.current !== nextProps.current) {
-      this.serverName = nextProps.current.name
+  async componentDidUpdate(prevProps, prevState) {
+    if (prevProps.current !== this.props.current) {
+      this.serverName = this.props.current && this.props.current.name
       await this.loadMessages()
       await this.loadHandlers()
     }
@@ -55,9 +56,9 @@ export default class GrpcServerComponent extends React.Component {
 
     let resp
     try {
-      resp = await axios.get(`/api/v1/servers/handlers?name=${this.serverName}`)
+      resp = await axios.get(urls.grpcServersHandlers, {params: {name: this.serverName}})
     } catch(err) {
-      return message.error(err)
+      return message.error(err.response.data)
     }
     this.handlers = Object.keys(resp.data).map(mtd => (
       {method: mtd, ...resp.data[mtd]}
@@ -72,19 +73,28 @@ export default class GrpcServerComponent extends React.Component {
 
     let resp
     try {
-      resp = await axios.get(`/api/v1/servers/messages?name=${this.serverName}&skip=${this.skip}&limit=${this.limit}`)
+      resp = await axios.get(urls.grpcServersMessages, {
+        params: {
+          name: this.serverName,
+          skip: this.skip,
+          limit: this.limit
+        }})
     } catch(err) {
-      return message.error(err)
+      return message.error(err.response.data)
     }
     this.messages = resp.data
     this.setState({loadingMessage: false})
   }
 
   onDeleteHandler = async item => {
+    if (this.serverName === undefined) {
+      return
+    }
+
     try {
-      await axios.delete(`/api/v1/servers/handlers?name=${this.props.current.name}&method=${item.method}`)
+      await axios.delete(urls.grpcServersHandlers, {params: {name: this.serverName, method: item.method}})
     } catch(err) {
-      return message.error(err)
+      return message.error(err.response.data)
     }
     await this.loadHandlers()
   }

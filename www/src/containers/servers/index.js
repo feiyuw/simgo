@@ -4,6 +4,7 @@ import axios from 'axios'
 import {NewServerDialog} from '../../components/dialog'
 import GrpcServerComponent from './grpc'
 import { PROTOCOLS, GRPC, HTTP, DUBBO } from '../../constants'
+import urls from '../../urls'
 
 
 export default class ServerApp extends React.Component {
@@ -19,9 +20,9 @@ export default class ServerApp extends React.Component {
   fetchServers = async () => {
     let resp
     try {
-      resp = await axios.get('/api/v1/servers')
+      resp = await axios.get(urls.servers)
     } catch(err) {
-      return message.error(err)
+      return message.error(err.response.data)
     }
 
     this.servers = resp.data
@@ -50,11 +51,11 @@ export default class ServerApp extends React.Component {
 
   deleteServer = async (serverName) => {
     try {
-      await axios.delete(`/api/v1/servers?name=${serverName}`)
+      await axios.delete(urls.servers, {params: {name: serverName}})
       await this.fetchServers()
       this.setState({current: this.servers[0], loading: false})
     } catch (err) {
-      return message.error(err.message.data)
+      return message.error(err.response.data)
     }
   }
 

@@ -1,6 +1,7 @@
 import React from 'react'
 import axios from 'axios'
 import { message, Select, Row, Col, Button, Form, Input } from 'antd'
+import urls from '../../urls'
 
 
 const {Option} = Select
@@ -21,9 +22,9 @@ class GrpcClientComponent extends React.Component {
     this.setState({loading: false})
   }
 
-  async componentWillReceiveProps(nextProps) {
-    if (this.props.current !== nextProps.current) {
-      this.clientId = nextProps.current.id
+  async componentDidUpdate(prevProps) {
+    if (this.props.current !== prevProps.current) {
+      this.clientId = this.props.current && this.props.current.id
       await this.fetchServices()
       await this.fetchMethods()
       this.setState({loading: false})
@@ -38,7 +39,7 @@ class GrpcClientComponent extends React.Component {
     }
 
     try {
-      resp = await axios.get(`/api/v1/clients/grpc/services?clientId=${this.clientId}`)
+      resp = await axios.get(urls.grpcClientsServices, {params: {clientId: this.clientId}})
     } catch (err) {
       message.error('fetch grpc services error!')
     }
@@ -57,7 +58,7 @@ class GrpcClientComponent extends React.Component {
       return
     }
     try {
-      resp = await axios.get(`/api/v1/clients/grpc/methods?clientId=${this.clientId}&service=${svcName}`)
+      resp = await axios.get(urls.grpcClientsMethods, {params: {clientId: this.clientId, service: svcName}})
     } catch (err) {
       message.error('fetch grpc methods error!')
     }
@@ -76,7 +77,7 @@ class GrpcClientComponent extends React.Component {
       let resp
 
       try{
-        resp = await axios.post('/api/v1/clients/invoke', {
+        resp = await axios.post(urls.grpcClientsInvoke, {
           clientId: this.clientId,
           method: values.method,
           data: values.data

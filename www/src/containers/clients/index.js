@@ -3,6 +3,7 @@ import { Popconfirm, message, Input, Select, Icon, Button, List, Row, Col } from
 import axios from 'axios'
 import {NewClientDialog} from '../../components/dialog'
 import GrpcClientComponent from './grpc'
+import urls from '../../urls'
 
 
 export default class ClientApp extends React.Component {
@@ -18,9 +19,9 @@ export default class ClientApp extends React.Component {
   fetchClients = async () => {
     let resp
     try {
-      resp = await axios.get('/api/v1/clients')
+      resp = await axios.get(urls.clients)
     } catch(err) {
-      return message.error(err)
+      return message.error(err.response.data)
     }
 
     this.clients = resp.data
@@ -49,11 +50,11 @@ export default class ClientApp extends React.Component {
 
   deleteClient = async (clientId) => {
     try {
-      await axios.delete(`/api/v1/clients?id=${clientId}`)
+      await axios.delete(urls.clients, {params: {id: clientId}})
       await this.fetchClients()
       this.setState({current: this.clients[this.clients.length - 1], loading: false})
     } catch (err) {
-      return message.error(err.message.data)
+      return message.error(err.response.data)
     }
   }
 
