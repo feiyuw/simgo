@@ -95,5 +95,8 @@ func TestServerRESTAPIs(t *testing.T) {
 		err = deleteServer(c)
 		So(err, ShouldBeNil)
 		So(rec.Code, ShouldEqual, http.StatusOK)
+		servers, err = serverStorage.FindAll()
+		So(err, ShouldBeNil)
+		So(len(servers), ShouldEqual, 0)
 	})
 }

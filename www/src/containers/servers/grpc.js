@@ -25,8 +25,19 @@ export default class GrpcServerComponent extends React.Component {
   limit = 20
 
   async componentDidMount() {
-    await this.loadMessages()
+    const reloadMessages = async () => {
+      await this.loadMessages()
+      this.intervalId = setTimeout(reloadMessages, 2000) // reload messages every 2 seconds
+    }
+
+    await reloadMessages()
     await this.loadHandlers()
+  }
+
+  componentWillUnmount() {
+    if (this.intervalId) {
+      clearTimeout(this.intervalId)
+    }
   }
 
   async componentWillReceiveProps(nextProps) {
