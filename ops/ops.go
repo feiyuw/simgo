@@ -21,14 +21,14 @@ func Start(addr string) {
 	}))
 
 	// routes
-	// clients
+	//	clients
 	opsServer.GET("/api/v1/clients", client.Query)
 	opsServer.POST("/api/v1/clients", client.New)
 	opsServer.DELETE("/api/v1/clients", client.Delete)
 	opsServer.POST("/api/v1/clients/invoke", client.Invoke)
 	opsServer.GET("/api/v1/clients/grpc/services", client.ListGrpcServices)
 	opsServer.GET("/api/v1/clients/grpc/methods", client.ListGrpcMethods)
-	// servers
+	//	servers
 	opsServer.GET("/api/v1/servers", server.Query)
 	opsServer.POST("/api/v1/servers", server.New)
 	opsServer.DELETE("/api/v1/servers", server.Delete)
@@ -37,7 +37,7 @@ func Start(addr string) {
 	opsServer.POST("/api/v1/servers/handlers", server.AddMethodHandler)
 	opsServer.DELETE("/api/v1/servers/handlers", server.DeleteMethodHandler)
 	opsServer.GET("/api/v1/servers/grpc/methods", server.ListGrpcMethods)
-	// other
+	//	other
 	opsServer.POST("/api/v1/files", uploadFile)
 	opsServer.DELETE("/api/v1/files", removeFile)
 	opsServer.Static("/", "www/build")

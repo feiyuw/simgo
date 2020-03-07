@@ -1,8 +1,8 @@
 package client
 
 import (
-	"errors"
 	"net/http"
+	"strconv"
 
 	"simgo/protocols"
 
@@ -10,15 +10,18 @@ import (
 )
 
 func ListGrpcServices(c echo.Context) error {
-	clientId := c.QueryParam("clientId")
+	clientId, err := strconv.ParseUint(c.QueryParam("clientId"), 10, 64)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "incorrect clientId")
+	}
 	client, err := clientStorage.FindOne(clientId)
 	if err != nil {
 		return err
 	}
-	if client.(*Client).Protocol != "grpc" {
-		return errors.New("invalid protocol")
+	if client.Protocol != "grpc" {
+		return c.String(http.StatusBadRequest, "invalid protocol")
 	}
-	services, err := client.(*Client).RpcClient.(*protocols.GrpcClient).ListServices()
+	services, err := client.RpcClient.(*protocols.GrpcClient).ListServices()
 	if err != nil {
 		return err
 	}
@@ -26,16 +29,19 @@ func ListGrpcServices(c echo.Context) error {
 }
 
 func ListGrpcMethods(c echo.Context) error {
-	clientId := c.QueryParam("clientId")
+	clientId, err := strconv.ParseUint(c.QueryParam("clientId"), 10, 64)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "incorrect clientId")
+	}
 	service := c.QueryParam("service")
 	client, err := clientStorage.FindOne(clientId)
 	if err != nil {
 		return err
 	}
-	if client.(*Client).Protocol != "grpc" {
-		return errors.New("invalid protocol")
+	if client.Protocol != "grpc" {
+		return c.String(http.StatusBadRequest, "invalid protocol")
 	}
-	methods, err := client.(*Client).RpcClient.(*protocols.GrpcClient).ListMethods(service)
+	methods, err := client.RpcClient.(*protocols.GrpcClient).ListMethods(service)
 	if err != nil {
 		return err
 	}

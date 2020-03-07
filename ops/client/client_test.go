@@ -29,37 +29,34 @@ func TestClientRESTAPIs(t *testing.T) {
 	e := echo.New()
 
 	Convey("show all clients in id order", t, func() {
-		clientStorage.Add("2", &Client{
-			Id:       "2",
+		id1, _ := clientStorage.Add(&Client{
 			Protocol: "grpc",
 			Server:   "127.0.0.1:1234",
 			Options:  map[string]interface{}{"protos": []string{"helloworld.proto"}},
 		})
-		clientStorage.Add("1", &Client{
-			Id:       "1",
+		id2, _ := clientStorage.Add(&Client{
 			Protocol: "http",
 			Server:   "127.0.0.1:1235",
 		})
-		clientStorage.Add("3", &Client{
-			Id:       "3",
+		id3, _ := clientStorage.Add(&Client{
 			Protocol: "dubbo",
 			Server:   "127.0.0.1:1237",
 		})
-		defer clientStorage.Remove("1")
-		defer clientStorage.Remove("2")
-		defer clientStorage.Remove("3")
+		defer clientStorage.Remove(id1)
+		defer clientStorage.Remove(id2)
+		defer clientStorage.Remove(id3)
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/clients", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		err := Query(c)
 		So(err, ShouldBeNil)
 		So(rec.Code, ShouldEqual, http.StatusOK)
-		clients := []interface{}{}
+		clients := []*Client{}
 		json.Unmarshal(rec.Body.Bytes(), &clients)
 		So(len(clients), ShouldEqual, 3)
-		So(clients[0].(map[string]interface{})["id"], ShouldEqual, "1")
-		So(clients[1].(map[string]interface{})["id"], ShouldEqual, "2")
-		So(clients[2].(map[string]interface{})["id"], ShouldEqual, "3")
+		So(clients[0].Id, ShouldEqual, id1)
+		So(clients[1].Id, ShouldEqual, id2)
+		So(clients[2].Id, ShouldEqual, id3)
 	})
 
 	Convey("concurrent clients will use different ID", t, func() {
@@ -70,10 +67,11 @@ func TestClientRESTAPIs(t *testing.T) {
 
 		var wg sync.WaitGroup
 		var cnt = 100
+		nextClientID = 0 // reset clientId to 0
 
 		defer func() {
 			for idx := 0; idx < cnt; idx++ {
-				clientStorage.Remove(strconv.Itoa(idx + 1))
+				clientStorage.Remove(uint64(idx + 1))
 			}
 		}()
 
@@ -93,9 +91,9 @@ func TestClientRESTAPIs(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(len(clients), ShouldEqual, cnt)
 
-		idMap := make(map[string]int, cnt)
+		idMap := make(map[uint64]int, cnt)
 		for _, client := range clients {
-			key := client.(*Client).Id
+			key := client.Id
 			if _, exists := idMap[key]; exists {
 				idMap[key]++
 			} else {
@@ -106,14 +104,13 @@ func TestClientRESTAPIs(t *testing.T) {
 	})
 
 	Convey("remove one client", t, func() {
-		clientStorage.Add("4", &Client{
-			Id:        "4",
+		id4, _ := clientStorage.Add(&Client{
 			Protocol:  "dubbo",
 			Server:    "127.0.0.1:1237",
 			RpcClient: &mockClient{},
 		})
-		defer clientStorage.Remove("4")
-		req := httptest.NewRequest(http.MethodDelete, "/api/v1/clients?id=4", nil)
+		defer clientStorage.Remove(id4)
+		req := httptest.NewRequest(http.MethodDelete, "/api/v1/clients?id="+strconv.FormatUint(id4, 10), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		Delete(c)

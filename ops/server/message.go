@@ -19,6 +19,7 @@ type Message struct {
 
 func newMessageRecorder(server *Server) func(mtd, direction, from, to, body string) error {
 	server.Messages = make([]*Message, 0, MSGSIZE)
+
 	return func(mtd, direction, from, to, body string) error {
 		msg := &Message{
 			Method:    mtd,
@@ -28,8 +29,9 @@ func newMessageRecorder(server *Server) func(mtd, direction, from, to, body stri
 			Ts:        time.Now().UnixNano() / int64(time.Millisecond),
 			Body:      body,
 		}
-		// TODO: add rlock
-		if len(server.Messages) == MSGSIZE {
+		server.Lock()
+		defer server.Unlock()
+		if len(server.Messages) >= MSGSIZE {
 			copy(server.Messages[1:], server.Messages[0:MSGSIZE-1])
 			server.Messages[0] = msg
 		} else {

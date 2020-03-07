@@ -13,6 +13,7 @@ import (
 	"simgo/storage"
 	"sort"
 	"strconv"
+	"sync"
 )
 
 var (
@@ -28,6 +29,8 @@ func init() {
 }
 
 type Server struct {
+	sync.RWMutex
+
 	Name           string                 `json:"name"`
 	Protocol       string                 `json:"protocol"`
 	Port           int                    `json:"port"`
@@ -115,17 +118,18 @@ func AddMethodHandler(c echo.Context) error {
 		return err
 	}
 
-	server, err := serverStorage.FindOne(handler.ServerName)
+	serverRecord, err := serverStorage.FindOne(handler.ServerName)
 	if err != nil {
 		return err
 	}
+	server := serverRecord.(*Server)
 
-	if _, exists := server.(*Server).MethodHandlers[handler.Method]; exists {
+	if _, exists := server.MethodHandlers[handler.Method]; exists {
 		return errors.New("method handler exists")
 	}
-	switch server.(*Server).Protocol {
+	switch server.Protocol {
 	case "grpc":
-		err = server.(*Server).RpcServer.(*protocols.GrpcServer).SetMethodHandler(handler.Method, func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
+		err = server.RpcServer.(*protocols.GrpcServer).SetMethodHandler(handler.Method, func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error {
 			switch handler.Type {
 			case "raw":
 				resp := make(map[string]interface{})
@@ -150,7 +154,7 @@ func AddMethodHandler(c echo.Context) error {
 		if err != nil {
 			return err
 		}
-		server.(*Server).MethodHandlers[handler.Method] = handler
+		server.MethodHandlers[handler.Method] = handler
 	}
 
 	return c.JSON(http.StatusOK, nil)
@@ -158,19 +162,20 @@ func AddMethodHandler(c echo.Context) error {
 
 func DeleteMethodHandler(c echo.Context) error {
 	serverName := c.QueryParam("name")
-	server, err := serverStorage.FindOne(serverName)
+	serverRecord, err := serverStorage.FindOne(serverName)
 	if err != nil {
 		return err
 	}
 	mtd := c.QueryParam("method")
+	server := serverRecord.(*Server)
 
-	if _, exists := server.(*Server).MethodHandlers[mtd]; exists {
-		switch server.(*Server).Protocol {
+	if _, exists := server.MethodHandlers[mtd]; exists {
+		switch server.Protocol {
 		case "grpc":
-			if err := server.(*Server).RpcServer.(*protocols.GrpcServer).RemoveMethodHandler(mtd); err != nil {
+			if err := server.RpcServer.(*protocols.GrpcServer).RemoveMethodHandler(mtd); err != nil {
 				return err
 			}
-			delete(server.(*Server).MethodHandlers, mtd)
+			delete(server.MethodHandlers, mtd)
 		}
 	}
 
