@@ -1,4 +1,4 @@
-package ops
+package server
 
 import (
 	"encoding/json"
@@ -52,7 +52,7 @@ type Server struct {
 	MethodHandlers map[string]*MethodHandler
 }
 
-func listServers(c echo.Context) error {
+func Query(c echo.Context) error {
 	servers, err := serverStorage.FindAll()
 	if err != nil {
 		return err
@@ -66,7 +66,7 @@ func listServers(c echo.Context) error {
 	return c.JSON(http.StatusOK, servers)
 }
 
-func newServer(c echo.Context) error {
+func New(c echo.Context) error {
 	server := new(Server)
 	if err := c.Bind(server); err != nil {
 		return err
@@ -109,7 +109,7 @@ func newServer(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-func deleteServer(c echo.Context) error {
+func Delete(c echo.Context) error {
 	serverName := c.QueryParam("name")
 	server, err := serverStorage.FindOne(serverName)
 	if err != nil {
@@ -124,7 +124,7 @@ func deleteServer(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-func fetchMessages(c echo.Context) error {
+func FetchMessages(c echo.Context) error {
 	var (
 		limit, skip int
 		err         error
@@ -169,7 +169,7 @@ type MethodHandler struct {
 	Content    string `json:"content"`
 }
 
-func listMethodHandlers(c echo.Context) error {
+func ListMethodHandlers(c echo.Context) error {
 	serverName := c.QueryParam("name")
 	server, err := serverStorage.FindOne(serverName)
 	if err != nil {
@@ -179,7 +179,7 @@ func listMethodHandlers(c echo.Context) error {
 	return c.JSON(http.StatusOK, server.(*Server).MethodHandlers)
 }
 
-func addMethodHandler(c echo.Context) error {
+func AddMethodHandler(c echo.Context) error {
 	handler := new(MethodHandler)
 	if err := c.Bind(handler); err != nil {
 		return err
@@ -226,7 +226,7 @@ func addMethodHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-func deleteMethodHandler(c echo.Context) error {
+func DeleteMethodHandler(c echo.Context) error {
 	serverName := c.QueryParam("name")
 	server, err := serverStorage.FindOne(serverName)
 	if err != nil {
@@ -245,23 +245,4 @@ func deleteMethodHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, nil)
-}
-
-func listServerGrpcMethods(c echo.Context) error {
-	serverName := c.QueryParam("name")
-	server, err := serverStorage.FindOne(serverName)
-	if err != nil {
-		return err
-	}
-
-	if server.(*Server).Protocol != "grpc" {
-		return errors.New("incorrect protocol")
-	}
-
-	methods, err := server.(*Server).RpcServer.(*protocols.GrpcServer).ListMethods()
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, methods)
 }

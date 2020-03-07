@@ -1,7 +1,6 @@
-package ops
+package client
 
 import (
-	"errors"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"simgo/logger"
@@ -33,7 +32,7 @@ type Client struct {
 	RpcClient protocols.RpcClient
 }
 
-func listClients(c echo.Context) error {
+func Query(c echo.Context) error {
 	clients, err := clientStorage.FindAll()
 	if err != nil {
 		return err
@@ -52,7 +51,7 @@ func listClients(c echo.Context) error {
 	return c.JSON(http.StatusOK, clients)
 }
 
-func newClient(c echo.Context) error {
+func New(c echo.Context) error {
 	client := new(Client)
 	if err := c.Bind(client); err != nil {
 		return err
@@ -68,7 +67,7 @@ func newClient(c echo.Context) error {
 	return c.JSON(http.StatusOK, nil)
 }
 
-func deleteClient(c echo.Context) error {
+func Delete(c echo.Context) error {
 	clientId := c.QueryParam("id")
 	client, err := clientStorage.FindOne(clientId)
 	if err != nil {
@@ -90,7 +89,7 @@ type rpcRequest struct {
 	Data     string `json:"data"`
 }
 
-func invokeClientRPC(c echo.Context) error {
+func Invoke(c echo.Context) error {
 	req := new(rpcRequest)
 	if err := c.Bind(req); err != nil {
 		return err
@@ -107,37 +106,4 @@ func invokeClientRPC(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, resp)
-}
-
-func listGrpcServices(c echo.Context) error {
-	clientId := c.QueryParam("clientId")
-	client, err := clientStorage.FindOne(clientId)
-	if err != nil {
-		return err
-	}
-	if client.(*Client).Protocol != "grpc" {
-		return errors.New("invalid protocol")
-	}
-	services, err := client.(*Client).RpcClient.(*protocols.GrpcClient).ListServices()
-	if err != nil {
-		return err
-	}
-	return c.JSON(http.StatusOK, services)
-}
-
-func listGrpcMethods(c echo.Context) error {
-	clientId := c.QueryParam("clientId")
-	service := c.QueryParam("service")
-	client, err := clientStorage.FindOne(clientId)
-	if err != nil {
-		return err
-	}
-	if client.(*Client).Protocol != "grpc" {
-		return errors.New("invalid protocol")
-	}
-	methods, err := client.(*Client).RpcClient.(*protocols.GrpcClient).ListMethods(service)
-	if err != nil {
-		return err
-	}
-	return c.JSON(http.StatusOK, methods)
 }

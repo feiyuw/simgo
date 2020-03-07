@@ -1,4 +1,4 @@
-package ops
+package server
 
 import (
 	"encoding/json"
@@ -40,7 +40,7 @@ func TestServerRESTAPIs(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/servers", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		listServers(c)
+		Query(c)
 		So(rec.Code, ShouldEqual, http.StatusOK)
 		servers := []interface{}{}
 		json.Unmarshal(rec.Body.Bytes(), &servers)
@@ -52,11 +52,11 @@ func TestServerRESTAPIs(t *testing.T) {
 
 	Convey("unary grpc server e2e test", t, func() {
 		// 1. new grpc server
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/servers", strings.NewReader(`{"name":"server_e2e","port":5000,"protocol":"grpc","options":{"protos":["../protocols/helloworld.proto"]}}`))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/servers", strings.NewReader(`{"name":"server_e2e","port":5000,"protocol":"grpc","options":{"protos":["../../protocols/helloworld.proto"]}}`))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		err := newServer(c)
+		err := New(c)
 		So(err, ShouldBeNil)
 		So(rec.Code, ShouldEqual, http.StatusOK)
 		servers, err := serverStorage.FindAll()
@@ -67,12 +67,12 @@ func TestServerRESTAPIs(t *testing.T) {
 		req = httptest.NewRequest(http.MethodPost, "/api/v1/servers/handlers", strings.NewReader(`{"name":"server_e2e","method":"helloworld.Greeter.SayHello","type":"raw","content":"{\"message\":\"hello you\"}"}`))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 		c = e.NewContext(req, rec)
-		err = addMethodHandler(c)
+		err = AddMethodHandler(c)
 		So(err, ShouldBeNil)
 		So(rec.Code, ShouldEqual, http.StatusOK)
 
 		// 3. send request and verify response
-		client, err := protocols.NewGrpcClient("127.0.0.1:5000", []string{"../protocols/helloworld.proto"}, grpc.WithInsecure())
+		client, err := protocols.NewGrpcClient("127.0.0.1:5000", []string{"../../protocols/helloworld.proto"}, grpc.WithInsecure())
 		So(err, ShouldBeNil)
 		out, err := client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "you"})
 		So(err, ShouldBeNil)
@@ -81,7 +81,7 @@ func TestServerRESTAPIs(t *testing.T) {
 		// 4. fetch messages
 		req = httptest.NewRequest(http.MethodGet, "/api/v1/servers/messages?name=server_e2e", nil)
 		c = e.NewContext(req, rec)
-		err = fetchMessages(c)
+		err = FetchMessages(c)
 		So(err, ShouldBeNil)
 		So(rec.Code, ShouldEqual, http.StatusOK)
 		So(rec.Body.String(), ShouldNotEqual, "")
@@ -92,7 +92,7 @@ func TestServerRESTAPIs(t *testing.T) {
 		// 5. delete server
 		req = httptest.NewRequest(http.MethodDelete, "/api/v1/servers?name=server_e2e", nil)
 		c = e.NewContext(req, rec)
-		err = deleteServer(c)
+		err = Delete(c)
 		So(err, ShouldBeNil)
 		So(rec.Code, ShouldEqual, http.StatusOK)
 		servers, err = serverStorage.FindAll()

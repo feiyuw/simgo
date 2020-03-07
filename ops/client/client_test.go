@@ -1,4 +1,4 @@
-package ops
+package client
 
 import (
 	"bou.ke/monkey"
@@ -51,7 +51,8 @@ func TestClientRESTAPIs(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/clients", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		listClients(c)
+		err := Query(c)
+		So(err, ShouldBeNil)
 		So(rec.Code, ShouldEqual, http.StatusOK)
 		clients := []interface{}{}
 		json.Unmarshal(rec.Body.Bytes(), &clients)
@@ -84,7 +85,7 @@ func TestClientRESTAPIs(t *testing.T) {
 				req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 				rec := httptest.NewRecorder()
 				c := e.NewContext(req, rec)
-				newClient(c)
+				New(c)
 			}()
 		}
 		wg.Wait()
@@ -115,7 +116,7 @@ func TestClientRESTAPIs(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, "/api/v1/clients?id=4", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
-		deleteClient(c)
+		Delete(c)
 		So(rec.Code, ShouldEqual, http.StatusOK)
 		So(rec.Body.String(), ShouldEqual, "null\n")
 	})
