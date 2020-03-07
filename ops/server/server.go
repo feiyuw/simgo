@@ -13,11 +13,6 @@ import (
 	"simgo/storage"
 	"sort"
 	"strconv"
-	"time"
-)
-
-const (
-	MSGSIZE = 1000
 )
 
 var (
@@ -30,15 +25,6 @@ func init() {
 	if serverStorage, err = storage.NewMemoryStorage(); err != nil {
 		logger.Fatal("ops/server", "init storage error", err)
 	}
-}
-
-type Message struct {
-	Method    string `json:"method"`
-	Direction string `json:"direction"`
-	From      string `json:"from"`
-	To        string `json:"to"`
-	Ts        int64  `json:"ts"`
-	Body      string `json:"body"`
 }
 
 type Server struct {
@@ -86,25 +72,7 @@ func New(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
-	server.Messages = make([]*Message, 0, MSGSIZE) // TODO: handle message save and load in storage
-	server.RpcServer.AddListener(func(mtd, direction, from, to, body string) error {
-		msg := &Message{
-			Method:    mtd,
-			Direction: direction,
-			From:      from,
-			To:        to,
-			Ts:        time.Now().UnixNano() / int64(time.Millisecond),
-			Body:      body,
-		}
-		// TODO: add rlock
-		if len(server.Messages) == MSGSIZE {
-			copy(server.Messages[1:], server.Messages[0:MSGSIZE-1])
-			server.Messages[0] = msg
-		} else {
-			server.Messages = append([]*Message{msg}, server.Messages...)
-		}
-		return nil
-	})
+	server.RpcServer.AddListener(newMessageRecorder(server))
 
 	return c.JSON(http.StatusOK, nil)
 }
@@ -122,44 +90,6 @@ func Delete(c echo.Context) error {
 		return err
 	}
 	return c.JSON(http.StatusOK, nil)
-}
-
-func FetchMessages(c echo.Context) error {
-	var (
-		limit, skip int
-		err         error
-		messages    []*Message
-	)
-
-	serverName := c.QueryParam("name")
-	if qLimit := c.QueryParam("limit"); qLimit != "" {
-		limit, err = strconv.Atoi(qLimit)
-	}
-	if err != nil || limit <= 0 {
-		limit = 30
-	}
-	if qSkip := c.QueryParam("skip"); qSkip != "" {
-		skip, err = strconv.Atoi(qSkip)
-	}
-	if err != nil || skip < 0 {
-		skip = 0
-	}
-
-	server, err := serverStorage.FindOne(serverName)
-	if err != nil {
-		return err
-	}
-
-	msgCnt := len(server.(*Server).Messages)
-	if msgCnt <= skip {
-		messages = []*Message{}
-	} else if msgCnt <= skip+limit {
-		messages = server.(*Server).Messages[skip:msgCnt]
-	} else {
-		messages = server.(*Server).Messages[skip : skip+limit]
-	}
-
-	return c.JSON(http.StatusOK, messages)
 }
 
 type MethodHandler struct {
@@ -245,4 +175,32 @@ func DeleteMethodHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, nil)
+}
+
+func FetchMessages(c echo.Context) error {
+	var (
+		limit, skip int
+		err         error
+	)
+
+	serverName := c.QueryParam("name")
+	if qLimit := c.QueryParam("limit"); qLimit != "" {
+		limit, err = strconv.Atoi(qLimit)
+	}
+	if err != nil || limit <= 0 {
+		limit = 30
+	}
+	if qSkip := c.QueryParam("skip"); qSkip != "" {
+		skip, err = strconv.Atoi(qSkip)
+	}
+	if err != nil || skip < 0 {
+		skip = 0
+	}
+
+	server, err := serverStorage.FindOne(serverName)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, queryMessages(server.(*Server), skip, limit))
 }
