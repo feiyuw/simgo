@@ -105,11 +105,11 @@ status: **draft**
 
 As a client simulator.
 
-![client](snapshot_client.png)
+![client](https://github.com/feiyuw/simgo/raw/master/snapshot_client.png)
 
 As a server simulator.
 
-![server](snapshot_server.png)
+![server](https://github.com/feiyuw/simgo/raw/master/snapshot_server.png)
 
 ## As a test automation library
 
