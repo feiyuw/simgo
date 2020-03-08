@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"simgo/protocols"
 
@@ -10,17 +11,20 @@ import (
 )
 
 func ListGrpcMethods(c echo.Context) error {
-	serverName := c.QueryParam("name")
-	server, err := serverStorage.FindOne(serverName)
+	serverId, err := strconv.ParseUint(c.QueryParam("serverId"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, "incorrect server ID")
+	}
+	server, err := serverStorage.FindOne(serverId)
 	if err != nil {
 		return err
 	}
 
-	if server.(*Server).Protocol != "grpc" {
+	if server.Protocol != "grpc" {
 		return errors.New("incorrect protocol")
 	}
 
-	methods, err := server.(*Server).RpcServer.(*protocols.GrpcServer).ListMethods()
+	methods, err := server.RpcServer.(*protocols.GrpcServer).ListMethods()
 	if err != nil {
 		return err
 	}

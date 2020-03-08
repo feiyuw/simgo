@@ -37,10 +37,10 @@ func (c *clients) Add(value *Client) (uint64, error) {
 }
 
 func (c *clients) Remove(key uint64) error {
-	c.Lock()
-	defer c.Unlock()
-
+	c.RLock()
 	client, exists := c.M[key]
+	c.RUnlock()
+
 	if exists {
 		if client.RpcClient != nil {
 			if err := client.RpcClient.Close(); err != nil { // NOTE: Close may cause some time, make c.M hung

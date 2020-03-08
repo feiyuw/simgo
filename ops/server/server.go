@@ -3,54 +3,22 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
+	"strconv"
+
+	"simgo/protocols"
+
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/labstack/echo/v4"
 	"github.com/robertkrimen/otto"
 	"google.golang.org/grpc"
-	"net/http"
-	"simgo/logger"
-	"simgo/protocols"
-	"simgo/storage"
-	"sort"
-	"strconv"
-	"sync"
 )
-
-var (
-	serverStorage storage.Storage
-)
-
-func init() {
-	var err error
-
-	if serverStorage, err = storage.NewMemoryStorage(); err != nil {
-		logger.Fatal("ops/server", "init storage error", err)
-	}
-}
-
-type Server struct {
-	sync.RWMutex
-
-	Name           string                 `json:"name"`
-	Protocol       string                 `json:"protocol"`
-	Port           int                    `json:"port"`
-	Options        map[string]interface{} `json:"options"`
-	Clients        []string               `json:"clients"` // TODO: clients identifier
-	RpcServer      protocols.RpcServer
-	Messages       []*Message
-	MethodHandlers map[string]*MethodHandler
-}
 
 func Query(c echo.Context) error {
 	servers, err := serverStorage.FindAll()
 	if err != nil {
 		return err
 	}
-
-	// sort servers with Name order
-	sort.Slice(servers, func(idx1, idx2 int) bool {
-		return servers[idx1].(*Server).Name < servers[idx2].(*Server).Name
-	})
 
 	return c.JSON(http.StatusOK, servers)
 }
@@ -68,7 +36,8 @@ func New(c echo.Context) error {
 	server.RpcServer = rpcServer
 	server.MethodHandlers = map[string]*MethodHandler{}
 
-	if err = serverStorage.Add(server.Name, server); err != nil {
+	serverId, err := serverStorage.Add(server)
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 	if err = server.RpcServer.Start(); err != nil {
@@ -77,39 +46,38 @@ func New(c echo.Context) error {
 
 	server.RpcServer.AddListener(newMessageRecorder(server))
 
-	return c.JSON(http.StatusOK, nil)
+	return c.JSON(http.StatusOK, map[string]uint64{"id": serverId})
 }
 
 func Delete(c echo.Context) error {
-	serverName := c.QueryParam("name")
-	server, err := serverStorage.FindOne(serverName)
+	serverId, err := strconv.ParseUint(c.QueryParam("id"), 10, 64)
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, "incorrect server ID")
 	}
-	if err := server.(*Server).RpcServer.Close(); err != nil {
-		return err
-	}
-	if err := serverStorage.Remove(serverName); err != nil {
+	if err := serverStorage.Remove(serverId); err != nil {
 		return err
 	}
 	return c.JSON(http.StatusOK, nil)
 }
 
 type MethodHandler struct {
-	ServerName string `json:"name"`
-	Method     string `json:"method"`
-	Type       string `json:"type"`
-	Content    string `json:"content"`
+	ServerID uint64 `json:"serverId"`
+	Method   string `json:"method"`
+	Type     string `json:"type"`
+	Content  string `json:"content"`
 }
 
 func ListMethodHandlers(c echo.Context) error {
-	serverName := c.QueryParam("name")
-	server, err := serverStorage.FindOne(serverName)
+	serverId, err := strconv.ParseUint(c.QueryParam("serverId"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, "incorrect server ID")
+	}
+	server, err := serverStorage.FindOne(serverId)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusOK, server.(*Server).MethodHandlers)
+	return c.JSON(http.StatusOK, server.MethodHandlers)
 }
 
 func AddMethodHandler(c echo.Context) error {
@@ -118,11 +86,10 @@ func AddMethodHandler(c echo.Context) error {
 		return err
 	}
 
-	serverRecord, err := serverStorage.FindOne(handler.ServerName)
+	server, err := serverStorage.FindOne(handler.ServerID)
 	if err != nil {
 		return err
 	}
-	server := serverRecord.(*Server)
 
 	if _, exists := server.MethodHandlers[handler.Method]; exists {
 		return errors.New("method handler exists")
@@ -161,13 +128,16 @@ func AddMethodHandler(c echo.Context) error {
 }
 
 func DeleteMethodHandler(c echo.Context) error {
-	serverName := c.QueryParam("name")
-	serverRecord, err := serverStorage.FindOne(serverName)
+	serverId, err := strconv.ParseUint(c.QueryParam("serverId"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, "incorrect server ID")
+	}
+	server, err := serverStorage.FindOne(serverId)
 	if err != nil {
 		return err
 	}
+
 	mtd := c.QueryParam("method")
-	server := serverRecord.(*Server)
 
 	if _, exists := server.MethodHandlers[mtd]; exists {
 		switch server.Protocol {
@@ -185,10 +155,17 @@ func DeleteMethodHandler(c echo.Context) error {
 func FetchMessages(c echo.Context) error {
 	var (
 		limit, skip int
-		err         error
 	)
 
-	serverName := c.QueryParam("name")
+	serverId, err := strconv.ParseUint(c.QueryParam("serverId"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, "incorrect server ID")
+	}
+	server, err := serverStorage.FindOne(serverId)
+	if err != nil {
+		return err
+	}
+
 	if qLimit := c.QueryParam("limit"); qLimit != "" {
 		limit, err = strconv.Atoi(qLimit)
 	}
@@ -202,10 +179,5 @@ func FetchMessages(c echo.Context) error {
 		skip = 0
 	}
 
-	server, err := serverStorage.FindOne(serverName)
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, queryMessages(server.(*Server), skip, limit))
+	return c.JSON(http.StatusOK, queryMessages(server, skip, limit))
 }

@@ -19,7 +19,7 @@ class GrpcHandlerForm extends React.Component {
 
     let resp
     try {
-      resp = await axios.get(urls.grpcServersMethods, {params: {name: this.props.server}})
+      resp = await axios.get(urls.grpcServersMethods, {params: {serverId: this.props.server}})
     } catch(err) {
       return message.error(err)
     }
@@ -35,7 +35,7 @@ class GrpcHandlerForm extends React.Component {
       }
       try{
         await axios.post(urls.grpcServersHandlers, {
-          name: this.props.server,
+          serverId: this.props.server,
           method: values.method,
           type: values.type,
           content: values.content,

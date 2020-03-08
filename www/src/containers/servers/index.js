@@ -49,9 +49,9 @@ export default class ServerApp extends React.Component {
     this.setState({showNewDialog: true})
   }
 
-  deleteServer = async (serverName) => {
+  deleteServer = async (serverId) => {
     try {
-      await axios.delete(urls.servers, {params: {name: serverName}})
+      await axios.delete(urls.servers, {params: {id: serverId}})
       await this.fetchServers()
       this.setState({current: this.servers[0], loading: false})
     } catch (err) {
@@ -91,11 +91,11 @@ export default class ServerApp extends React.Component {
                       style={(current!==undefined && current.name===item.name) ? {backgroundColor: '#1890FF', color: 'white', maxWidth: '80%'}: {}}
                       onClick={() => this.setState({current: item})}
                     >
-                        {item.name} ({item.protocol}:{item.port})
+                        # {item.id} {item.name} ({item.protocol}:{item.port})
                     </Button>
                     <Popconfirm
                       title='close this client?'
-                      onConfirm={() => this.deleteServer(item.name)}
+                      onConfirm={() => this.deleteServer(item.id)}
                     >
                       <Button
                         type='link'
@@ -126,7 +126,7 @@ export default class ServerApp extends React.Component {
           onSubmit={async () => {
             await this.fetchServers()
             this.setState({
-              current: this.servers[0],
+              current: this.servers[this.servers.length - 1],
               loading: false,
               showNewDialog: false})
           }}

@@ -13,7 +13,7 @@ export default class ClientApp extends React.Component {
 
   async componentDidMount() {
     await this.fetchClients()
-    this.setState({current: this.clients[this.clients.length - 1], loading: false})
+    this.setState({current: this.clients[0], loading: false})
   }
 
   fetchClients = async () => {
@@ -52,7 +52,7 @@ export default class ClientApp extends React.Component {
     try {
       await axios.delete(urls.clients, {params: {id: clientId}})
       await this.fetchClients()
-      this.setState({current: this.clients[this.clients.length - 1], loading: false})
+      this.setState({current: this.clients[0], loading: false})
     } catch (err) {
       return message.error(err.response.data)
     }

@@ -19,7 +19,7 @@ const MessageItem = ({method, direction, from, to, ts, body}) => (
 
 export default class GrpcServerComponent extends React.Component {
   state = {loadingHandler: true, loadingMessage: true, showHandlerDialog: false}
-  serverName = this.props.current && this.props.current.name
+  serverId = this.props.current && this.props.current.id
   handlers = []
   messages = []
   skip = 0
@@ -41,22 +41,22 @@ export default class GrpcServerComponent extends React.Component {
     }
   }
 
-  async componentDidUpdate(prevProps, prevState) {
+  async componentDidUpdate(prevProps) {
     if (prevProps.current !== this.props.current) {
-      this.serverName = this.props.current && this.props.current.name
+      this.serverId = this.props.current && this.props.current.id
       await this.loadMessages()
       await this.loadHandlers()
     }
   }
 
   loadHandlers = async () => {
-    if (this.serverName === undefined) {
+    if (this.serverId === undefined) {
       return
     }
 
     let resp
     try {
-      resp = await axios.get(urls.grpcServersHandlers, {params: {name: this.serverName}})
+      resp = await axios.get(urls.grpcServersHandlers, {params: {serverId: this.serverId}})
     } catch(err) {
       return message.error(err.response.data)
     }
@@ -67,7 +67,7 @@ export default class GrpcServerComponent extends React.Component {
   }
 
   loadMessages = async () => {
-    if (this.serverName === undefined) {
+    if (this.serverId === undefined) {
       return
     }
 
@@ -75,7 +75,7 @@ export default class GrpcServerComponent extends React.Component {
     try {
       resp = await axios.get(urls.grpcServersMessages, {
         params: {
-          name: this.serverName,
+          serverId: this.serverId,
           skip: this.skip,
           limit: this.limit
         }})
@@ -87,12 +87,12 @@ export default class GrpcServerComponent extends React.Component {
   }
 
   onDeleteHandler = async item => {
-    if (this.serverName === undefined) {
+    if (this.serverId === undefined) {
       return
     }
 
     try {
-      await axios.delete(urls.grpcServersHandlers, {params: {name: this.serverName, method: item.method}})
+      await axios.delete(urls.grpcServersHandlers, {params: {serverId: this.serverId, method: item.method}})
     } catch(err) {
       return message.error(err.response.data)
     }
@@ -156,7 +156,7 @@ export default class GrpcServerComponent extends React.Component {
           />
         </Card>
         <NewGrpcMethodHandlerDialog
-          server={this.props.current && this.props.current.name}
+          server={this.props.current && this.props.current.id}
           visible={showHandlerDialog}
           onClose={() => this.setState({showHandlerDialog: false})}
           onSubmit={async () => {
