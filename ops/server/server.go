@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"simgo/protocols"
+	"simgo/utils"
 
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/labstack/echo/v4"
@@ -50,7 +51,7 @@ func New(c echo.Context) error {
 }
 
 func Delete(c echo.Context) error {
-	serverId, err := strconv.ParseUint(c.QueryParam("id"), 10, 64)
+	serverId, err := utils.AtoUint64(c.QueryParam("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, "incorrect server ID")
 	}
@@ -68,7 +69,7 @@ type MethodHandler struct {
 }
 
 func ListMethodHandlers(c echo.Context) error {
-	serverId, err := strconv.ParseUint(c.QueryParam("serverId"), 10, 64)
+	serverId, err := utils.AtoUint64(c.QueryParam("serverId"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, "incorrect server ID")
 	}
@@ -128,7 +129,7 @@ func AddMethodHandler(c echo.Context) error {
 }
 
 func DeleteMethodHandler(c echo.Context) error {
-	serverId, err := strconv.ParseUint(c.QueryParam("serverId"), 10, 64)
+	serverId, err := utils.AtoUint64(c.QueryParam("serverId"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, "incorrect server ID")
 	}
@@ -157,7 +158,7 @@ func FetchMessages(c echo.Context) error {
 		limit, skip int
 	)
 
-	serverId, err := strconv.ParseUint(c.QueryParam("serverId"), 10, 64)
+	serverId, err := utils.AtoUint64(c.QueryParam("serverId"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, "incorrect server ID")
 	}

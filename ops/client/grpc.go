@@ -2,15 +2,15 @@ package client
 
 import (
 	"net/http"
-	"strconv"
 
 	"simgo/protocols"
+	"simgo/utils"
 
 	"github.com/labstack/echo/v4"
 )
 
 func ListGrpcServices(c echo.Context) error {
-	clientId, err := strconv.ParseUint(c.QueryParam("clientId"), 10, 64)
+	clientId, err := utils.AtoUint64(c.QueryParam("clientId"))
 	if err != nil {
 		return c.String(http.StatusBadRequest, "incorrect clientId")
 	}
@@ -29,7 +29,7 @@ func ListGrpcServices(c echo.Context) error {
 }
 
 func ListGrpcMethods(c echo.Context) error {
-	clientId, err := strconv.ParseUint(c.QueryParam("clientId"), 10, 64)
+	clientId, err := utils.AtoUint64(c.QueryParam("clientId"))
 	if err != nil {
 		return c.String(http.StatusBadRequest, "incorrect clientId")
 	}

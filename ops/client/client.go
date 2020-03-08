@@ -2,11 +2,11 @@ package client
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 
 	"simgo/protocols"
+	"simgo/utils"
 )
 
 func Query(c echo.Context) error {
@@ -34,7 +34,7 @@ func New(c echo.Context) error {
 }
 
 func Delete(c echo.Context) error {
-	clientId, err := strconv.ParseUint(c.QueryParam("id"), 10, 64)
+	clientId, err := utils.AtoUint64(c.QueryParam("id"))
 	if err != nil {
 		return c.String(http.StatusBadRequest, "incorrect clientId")
 	}

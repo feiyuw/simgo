@@ -27,3 +27,22 @@ func TestMin(t *testing.T) {
 		So(Min(-1, -3, 0, 1, 4), ShouldEqual, -3)
 	})
 }
+
+func TestAtoUint64(t *testing.T) {
+	Convey("string to uint64", t, func() {
+		v, err := AtoUint64("1")
+		So(err, ShouldBeNil)
+		So(v, ShouldEqual, uint64(1))
+		v, err = AtoUint64("123")
+		So(err, ShouldBeNil)
+		So(v, ShouldEqual, uint64(123))
+		_, err = AtoUint64("-123")
+		So(err, ShouldNotBeNil)
+		_, err = AtoUint64("")
+		So(err, ShouldNotBeNil)
+		_, err = AtoUint64("12a")
+		So(err, ShouldNotBeNil)
+		_, err = AtoUint64("12.34")
+		So(err, ShouldNotBeNil)
+	})
+}

@@ -3,15 +3,15 @@ package server
 import (
 	"errors"
 	"net/http"
-	"strconv"
 
 	"simgo/protocols"
+	"simgo/utils"
 
 	"github.com/labstack/echo/v4"
 )
 
 func ListGrpcMethods(c echo.Context) error {
-	serverId, err := strconv.ParseUint(c.QueryParam("serverId"), 10, 64)
+	serverId, err := utils.AtoUint64(c.QueryParam("serverId"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, "incorrect server ID")
 	}
