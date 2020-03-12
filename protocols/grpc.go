@@ -257,8 +257,8 @@ func (gs *GrpcServer) AddListener(listener func(mtd, direction, from, to, body s
 
 // set specified method handler, one method only have one handler, it's the highest priority
 // if you want to return error, see https://github.com/avinassh/grpc-errors/blob/master/go/server.go
+// NOTE: thread unsafe, use lock in ops level
 func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Message, out *dynamic.Message, stream grpc.ServerStream) error) error {
-	// TODO: use lock
 	if _, exists := gs.handlerM[mtd]; exists {
 		logger.Warnf("protocols/grpc", "handler for method %s exists, will be overrided", mtd)
 	}
@@ -266,8 +266,8 @@ func (gs *GrpcServer) SetMethodHandler(mtd string, handler func(in *dynamic.Mess
 	return nil
 }
 
+// NOTE: thread unsafe, use lock in ops level
 func (gs *GrpcServer) RemoveMethodHandler(mtd string) error {
-	// TODO: use lock
 	if _, exists := gs.handlerM[mtd]; exists {
 		delete(gs.handlerM, mtd)
 	}
