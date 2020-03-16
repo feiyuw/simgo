@@ -114,29 +114,44 @@ As a server simulator.
 ### Handler examples
 
 1. static response
+
 	type: raw
+
 	content: {"message": "hello world"}
+
 1. dynamic response
+
 	type: javascript
+
 	content: 
-		```javascript
+
+	```javascript
 		ctx.out.SetFieldByName("message", "hello " + ctx.in.GetFieldByName("message"))
-		```
+	```
+
 1. delay response
+
 	type: javascript
+
 	content: 
-		```javascript
+
+	```javascript
 		ctx.Sleep(1) // 1 second
 		ctx.out.SetFieldByName("message", ctx.in.GetFieldByName("message"))
-		```
+	```
+
 1. streaming response
+
 	type: javascript
+
 	content: 
-		```javascript
+
+	```javascript
 		ctx.stream.RecvMsg(ctx.in)  // read input stream
 		ctx.out.SetFieldByName("message", ctx.in.GetFieldByName("message"))
 		ctx.stream.SendMsg(ctx.out)  // send output stream
-		```
+	```
+
 1. error response
 
 ## As a test automation library
