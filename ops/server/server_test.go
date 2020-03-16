@@ -3,14 +3,17 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/labstack/echo/v4"
 	. "github.com/smartystreets/goconvey/convey"
 	"google.golang.org/grpc"
-	"net/http"
-	"net/http/httptest"
+
 	"simgo/protocols"
-	"strings"
-	"testing"
 )
 
 func TestServerRESTAPIs(t *testing.T) {
@@ -91,7 +94,32 @@ func TestServerRESTAPIs(t *testing.T) {
 		So(err, ShouldBeNil)
 		So(len(server.Messages), ShouldEqual, 2)
 
-		// 5. delete server
+		// 5. delete method handler
+		req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/servers/handlers?serverId=%d&method=helloworld.Greeter.SayHello", serverId), nil)
+		c = e.NewContext(req, rec)
+		err = DeleteMethodHandler(c)
+		So(err, ShouldBeNil)
+		So(rec.Code, ShouldEqual, http.StatusOK)
+
+		// 6. add javascript method handler
+		req = httptest.NewRequest(http.MethodPost, "/api/v1/servers/handlers", strings.NewReader(fmt.Sprintf(`{"serverId":%d,"method":"helloworld.Greeter.SayHello","type":"javascript","content":"ctx.Sleep(1); ctx.out.SetFieldByName(\"message\", \"xxx\")"}`, serverId)))
+		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+		c = e.NewContext(req, rec)
+		err = AddMethodHandler(c)
+		So(err, ShouldBeNil)
+		So(rec.Code, ShouldEqual, http.StatusOK)
+
+		// 7. send request and verify response
+		client, err = protocols.NewGrpcClient("127.0.0.1:5000", []string{"../../protocols/helloworld.proto"}, grpc.WithInsecure())
+		So(err, ShouldBeNil)
+		start := time.Now()
+		out, err = client.InvokeRPC("helloworld.Greeter.SayHello", map[string]interface{}{"name": "you"})
+		elapsed := time.Now().Sub(start)
+		So(err, ShouldBeNil)
+		So(out.(map[string]interface{})["message"], ShouldEqual, "xxx")
+		So(elapsed, ShouldBeGreaterThan, time.Second)
+
+		// 7. delete server
 		req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/servers?id=%d", serverId), nil)
 		c = e.NewContext(req, rec)
 		err = Delete(c)

@@ -8,6 +8,7 @@ import (
 
 	"simgo/protocols"
 	"simgo/utils"
+	"time"
 
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/labstack/echo/v4"
@@ -113,6 +114,9 @@ func AddMethodHandler(c echo.Context) error {
 					"in":     in,
 					"out":    out,
 					"stream": stream,
+					"Sleep": func(seconds uint64) {
+						time.Sleep(time.Duration(seconds) * time.Second)
+					},
 				})
 				vm.Run(handler.Content)
 			}
