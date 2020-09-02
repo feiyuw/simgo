@@ -4,9 +4,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"simgo/logger"
-	"simgo/ops/client"
-	"simgo/ops/server"
+	"github.com/feiyuw/simgo/logger"
+	"github.com/feiyuw/simgo/ops/client"
+	"github.com/feiyuw/simgo/ops/server"
 )
 
 var (

@@ -3,13 +3,14 @@ package protocols
 import (
 	"context"
 	"fmt"
-	. "github.com/smartystreets/goconvey/convey"
 	"io"
 	"net"
 	"testing"
 	"time"
 
-	"simgo/logger"
+	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/feiyuw/simgo/logger"
 
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/robertkrimen/otto"

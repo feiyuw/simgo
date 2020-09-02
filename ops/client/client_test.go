@@ -1,17 +1,18 @@
 package client
 
 import (
-	"bou.ke/monkey"
 	"encoding/json"
-	"github.com/labstack/echo/v4"
-	. "github.com/smartystreets/goconvey/convey"
 	"net/http"
 	"net/http/httptest"
-	"simgo/protocols"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
+
+	"bou.ke/monkey"
+	"github.com/feiyuw/simgo/protocols"
+	"github.com/labstack/echo/v4"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type mockClient struct {

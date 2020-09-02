@@ -5,10 +5,10 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-
-	"simgo/protocols"
-	"simgo/utils"
 	"time"
+
+	"github.com/feiyuw/simgo/protocols"
+	"github.com/feiyuw/simgo/utils"
 
 	"github.com/jhump/protoreflect/dynamic"
 	"github.com/labstack/echo/v4"

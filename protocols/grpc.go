@@ -8,7 +8,7 @@ import (
 	"net"
 	"reflect"
 
-	"simgo/logger"
+	"github.com/feiyuw/simgo/logger"
 
 	"github.com/fullstorydev/grpcurl"
 	"github.com/jhump/protoreflect/desc"

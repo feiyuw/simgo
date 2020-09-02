@@ -3,8 +3,8 @@ package client
 import (
 	"net/http"
 
-	"simgo/protocols"
-	"simgo/utils"
+	"github.com/feiyuw/simgo/protocols"
+	"github.com/feiyuw/simgo/utils"
 
 	"github.com/labstack/echo/v4"
 )

@@ -5,8 +5,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"simgo/protocols"
-	"simgo/utils"
+	"github.com/feiyuw/simgo/protocols"
+	"github.com/feiyuw/simgo/utils"
 )
 
 func Query(c echo.Context) error {

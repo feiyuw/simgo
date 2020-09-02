@@ -6,7 +6,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"simgo/protocols"
+	"github.com/feiyuw/simgo/protocols"
 )
 
 var (

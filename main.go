@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
-	"simgo/logger"
-	"simgo/ops"
+
+	"github.com/feiyuw/simgo/logger"
+	"github.com/feiyuw/simgo/ops"
 )
 
 var (

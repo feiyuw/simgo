@@ -1,4 +1,4 @@
-module simgo
+module github.com/feiyuw/simgo
 
 go 1.13
 

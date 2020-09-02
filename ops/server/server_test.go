@@ -13,7 +13,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"google.golang.org/grpc"
 
-	"simgo/protocols"
+	"github.com/feiyuw/simgo/protocols"
 )
 
 func TestServerRESTAPIs(t *testing.T) {
